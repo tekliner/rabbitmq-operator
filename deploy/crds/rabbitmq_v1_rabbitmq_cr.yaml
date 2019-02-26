@@ -1,0 +1,11 @@
+apiVersion: rabbitmq.improvado.io/v1
+kind: Rabbitmq
+metadata:
+  name: imp20rabbit
+spec:
+  replicas: 2
+  image:
+    name: rabbitmq
+    tag: 3-alpine
+  rabbitmqUsername: rabbituser
+  
