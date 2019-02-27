@@ -8,4 +8,7 @@ spec:
     name: rabbitmq
     tag: 3-alpine
   rabbitmqUsername: rabbituser
+  volumeSize: 1Gi
+  
+
   

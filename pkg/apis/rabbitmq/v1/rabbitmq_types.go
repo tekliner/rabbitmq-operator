@@ -2,6 +2,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,18 +41,21 @@ type RabbitmqManagementPlugin struct {
 type RabbitmqSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=10
-	RabbitmqReplicas            int32           `json:"replicas"`
-	RabbitmqUsername            string          `json:"rabbitmqUsername"`
-	RabbitmqVhost               string          `json:"rabbitmqVhost,omitempty"`
-	RabbitmqMemoryHighWatermark string          `json:"rabbitmqMemoryHighWatermark,omitempty"`
-	RabbitmqEpmdPort            int32           `json:"rabbitmqEpmdPort,omitempty"`
-	RabbitmqNodePort            int32           `json:"rabbitmqNodePort,omitempty"`
-	RabbitmqManagerPort         int32           `json:"rabbitmqManagerPort,omitempty"`
-	RabbitmqHipeCompile         bool            `json:"rabbitmqHipeCompile,omitempty"`
-	Image                       RabbitmqImage   `json:"image"`
-	SSL                         RabbitmqSSL     `json:"rabbitmqCert,omitempty"`
-	RabbitmqAuth                RabbitmqAuth    `json:"rabbitmqAuth,omitempty"`
-	ENV                         []corev1.EnvVar `json:"env,omitempty"`
+	RabbitmqReplicas            int32               `json:"replicas"`
+	RabbitmqUsername            string              `json:"rabbitmqUsername"`
+	RabbitmqVhost               string              `json:"rabbitmqVhost,omitempty"`
+	RabbitmqMemoryHighWatermark string              `json:"rabbitmqMemoryHighWatermark,omitempty"`
+	RabbitmqEpmdPort            int32               `json:"rabbitmqEpmdPort,omitempty"`
+	RabbitmqNodePort            int32               `json:"rabbitmqNodePort,omitempty"`
+	RabbitmqManagerPort         int32               `json:"rabbitmqManagerPort,omitempty"`
+	RabbitmqHipeCompile         bool                `json:"rabbitmqHipeCompile,omitempty"`
+	Image                       RabbitmqImage       `json:"image"`
+	SSL                         RabbitmqSSL         `json:"rabbitmqCert,omitempty"`
+	RabbitmqAuth                RabbitmqAuth        `json:"rabbitmqAuth,omitempty"`
+	ENV                         []corev1.EnvVar     `json:"env,omitempty"`
+	RabbitmqVolumeSize          resource.Quantity   `json:"volumeSize"`
+	RabbitmqPodRequests         corev1.ResourceList `json:"podRequests,omitempty"`
+	RabbitmqPodLimits           corev1.ResourceList `json:"podLimits,omitempty"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq

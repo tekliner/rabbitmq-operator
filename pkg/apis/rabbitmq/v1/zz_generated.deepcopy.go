@@ -168,6 +168,21 @@ func (in *RabbitmqSpec) DeepCopyInto(out *RabbitmqSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	out.RabbitmqVolumeSize = in.RabbitmqVolumeSize.DeepCopy()
+	if in.RabbitmqPodRequests != nil {
+		in, out := &in.RabbitmqPodRequests, &out.RabbitmqPodRequests
+		*out = make(corev1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
+	if in.RabbitmqPodLimits != nil {
+		in, out := &in.RabbitmqPodLimits, &out.RabbitmqPodLimits
+		*out = make(corev1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
 	return
 }
 

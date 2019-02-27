@@ -143,6 +143,30 @@ func newDeployment(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 					Name:  "rabbitmq",
 					Image: cr.Spec.Image.Name + ":" + cr.Spec.Image.Tag,
 					Env:   cr.Spec.ENV,
+					Resources: corev1.ResourceRequirements{
+						Requests: cr.Spec.RabbitmqPodRequests,
+						Limits:   cr.Spec.RabbitmqPodLimits,
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "rabbit-data",
+							MountPath: "/var/lib/rabbitmq",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	PVCTemplate := corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "rabbit-data",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: cr.Spec.RabbitmqVolumeSize,
 				},
 			},
 		},
@@ -159,7 +183,11 @@ func newDeployment(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
-			Template: podTemplate,
+			Template:             podTemplate,
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{PVCTemplate},
+			UpdateStrategy: v1.StatefulSetUpdateStrategy{
+				Type: v1.RollingUpdateStatefulSetStrategyType,
+			},
 		},
 	}
 }
