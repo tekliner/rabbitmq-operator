@@ -100,7 +100,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	deployment := newDeployment(instance)
+	deployment := newStatefulSet(instance)
 	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -126,7 +126,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 
 }
 
-func newDeployment(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
+func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 	labels := map[string]string{
 		"rabbitmq.improvado.io/app":       "rabbitmq",
 		"rabbitmq.improvado.io/name":      cr.Name,
@@ -187,29 +187,6 @@ func newDeployment(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{PVCTemplate},
 			UpdateStrategy: v1.StatefulSetUpdateStrategy{
 				Type: v1.RollingUpdateStatefulSetStrategyType,
-			},
-		},
-	}
-}
-
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *rabbitmqv1.Rabbitmq) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
 			},
 		},
 	}
