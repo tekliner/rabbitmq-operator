@@ -100,28 +100,28 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	deployment := newStatefulSet(instance)
-	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
+	statefulset := newStatefulSet(instance)
+	if err := controllerutil.SetControllerReference(instance, statefulset, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	found := &v1.StatefulSet{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, found)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: statefulset.Name, Namespace: statefulset.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new deployment", "deployment.Namespace", deployment.Namespace, "deployment.Name", deployment.Name)
-		err = r.client.Create(context.TODO(), deployment)
+		reqLogger.Info("Creating a new statefulset", "statefulset.Namespace", statefulset.Namespace, "statefulset.Name", statefulset.Name)
+		err = r.client.Create(context.TODO(), statefulset)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// deployment created successfully - don't requeue
+		// statefulset created successfully - don't requeue
 		return reconcile.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// deployment already exists - don't requeue
-	reqLogger.Info("Skip reconcile: deployment already exists", "deployment.Namespace", found.Namespace, "deployment.Name", found.Name)
+	// statefulset already exists - don't requeue
+	reqLogger.Info("Skip reconcile: statefulset already exists", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 	return reconcile.Result{}, nil
 
 }
