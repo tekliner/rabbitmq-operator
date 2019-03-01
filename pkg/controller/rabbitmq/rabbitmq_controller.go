@@ -2,6 +2,9 @@ package rabbitmq
 
 import (
 	"context"
+	"encoding/json"
+	"net"
+	"time"
 
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 	"k8s.io/api/apps/v1"
@@ -10,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -100,28 +104,35 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	deployment := newStatefulSet(instance)
-	if err := controllerutil.SetControllerReference(instance, deployment, r.scheme); err != nil {
+	statefulset := newStatefulSet(instance)
+	if err := controllerutil.SetControllerReference(instance, statefulset, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	found := &v1.StatefulSet{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: deployment.Namespace}, found)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: statefulset.Name, Namespace: statefulset.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new deployment", "deployment.Namespace", deployment.Namespace, "deployment.Name", deployment.Name)
-		err = r.client.Create(context.TODO(), deployment)
+		reqLogger.Info("Creating a new statefulset", "statefulset.Namespace", statefulset.Namespace, "statefulset.Name", statefulset.Name)
+		err = r.client.Create(context.TODO(), statefulset)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// deployment created successfully - don't requeue
+		// statefulset created successfully - don't requeue
 		return reconcile.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// deployment already exists - don't requeue
-	reqLogger.Info("Skip reconcile: deployment already exists", "deployment.Namespace", found.Namespace, "deployment.Name", found.Name)
+	// statefulset already exists - don't requeue
+	reqLogger.Info("Skip reconcile: statefulset already exists", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
+
+	// set policies
+	timeout, _ := time.ParseDuration("30")
+	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
+	defer ctxCancelTimeout()
+	go setPolicies(ctx, instance)
+
 	return reconcile.Result{}, nil
 
 }
@@ -190,4 +201,150 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			},
 		},
 	}
+}
+
+// sendPolicy send policy to api port
+func putPolicy(url string, policy []byte) {
+	// send request
+}
+
+// cleanPolicies return policies and remove all by name, no other method supported
+func cleanPolicies(apiService string, cr *rabbitmqv1.Rabbitmq) {
+	url := apiService + "/api/policies"
+
+	// request will return something like that:
+	// [{"vhost":"dts","name":"ha-three","pattern":".*","apply-to":"all","definition":
+	//{"ha-mode":"exactly","ha-params":3,"ha-sync-mode":"automatic"},"priority":0}]
+
+	response := getRequest(url)
+	var policies []rabbitmqv1.RabbitmqPolicy
+	err := json.Unmarshal(response, &policies)
+	if err != nil {
+		// something bad
+	}
+
+	for _, policyRecord := range policies {
+		deleteRequest(apiService + "/" + policyRecord.Vhost + "/" + policyRecord.Name)
+	}
+
+}
+
+// setPolicies run as go routine
+func setPolicies(ctx context.Context, cr *rabbitmqv1.Rabbitmq) {
+
+	reqLogger := log.WithValues("Request.Namespace", cr.Namespace, "Request.Name", cr.Name)
+	reqLogger.Info("Setting up policies")
+
+	// wait http connection to api port
+	timeout := time.Duration(5 * time.Second)
+	apiService := cr.Name + "-node:5672"
+
+	for {
+		_, err := net.DialTimeout("tcp", apiService, timeout)
+		if err != nil {
+			break
+		}
+	}
+
+	//clean rabbit before fulfilling policies list
+	cleanPolicies(apiService, cr)
+
+	//fulfill policies list
+	for _, policy := range cr.Spec.RabbitmqPolicies {
+		policyJSON, _ := json.Marshal(policy)
+		url := apiService + "/api/policies/" + cr.Name + "/" + policy.Name
+		// send policy to api service
+		reqLogger.Info("Adding policy " + policy.Name + ", URL: " + url + ", JSON: " + string(policyJSON))
+		putPolicy(url, policyJSON)
+	}
+}
+
+func newEpmdService(cr *rabbitmqv1.Rabbitmq) *corev1.Service {
+	labels := map[string]string{
+		"rabbitmq.improvado.io/app":       "rabbitmq",
+		"rabbitmq.improvado.io/name":      cr.Name,
+		"rabbitmq.improvado.io/component": "messaging",
+	}
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name + "-empd",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					TargetPort: intstr.IntOrString{IntVal: 4369},
+					Port:       4369,
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "empd",
+				},
+			},
+		},
+	}
+
+	return service
+}
+
+func newNodeService(cr *rabbitmqv1.Rabbitmq) *corev1.Service {
+	labels := map[string]string{
+		"rabbitmq.improvado.io/app":       "rabbitmq",
+		"rabbitmq.improvado.io/name":      cr.Name,
+		"rabbitmq.improvado.io/component": "messaging",
+	}
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name + "-node",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					TargetPort: intstr.IntOrString{IntVal: 5672},
+					Port:       5672,
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "node",
+				},
+			},
+		},
+	}
+
+	return service
+}
+
+func newHTTPService(cr *rabbitmqv1.Rabbitmq) *corev1.Service {
+	labels := map[string]string{
+		"rabbitmq.improvado.io/app":       "rabbitmq",
+		"rabbitmq.improvado.io/name":      cr.Name,
+		"rabbitmq.improvado.io/component": "messaging",
+	}
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name + "-api",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					TargetPort: intstr.IntOrString{IntVal: 15672},
+					Port:       15672,
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "api",
+				},
+			},
+		},
+	}
+
+	return service
 }

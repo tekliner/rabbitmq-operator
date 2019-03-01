@@ -9,6 +9,12 @@ spec:
     tag: 3-alpine
   rabbitmqUsername: rabbituser
   volumeSize: 1Gi
-  
-
-  
+  policies:
+    - name: ha-three
+      pattern: ".*"
+      definition: 
+        ha-mode: exactly
+        ha-params: 3
+        ha-sync-mode: automatic
+      priority: 0
+      applyto: all

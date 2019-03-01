@@ -36,6 +36,16 @@ type RabbitmqManagementPlugin struct {
 	Enabled bool `json:"enabled"`
 }
 
+// RabbitmqPolicy type
+type RabbitmqPolicy struct {
+	Vhost      string            `json:"vhost"`
+	Name       string            `json:"name"`
+	Pattern    string            `json:"pattern"`
+	Definition map[string]string `json:"definition"`
+	Priority   int64             `json:"priority"`
+	ApplyTo    string            `json:"apply-to"`
+}
+
 // RabbitmqSpec defines the desired state of Rabbitmq
 // +k8s:openapi-gen=true
 type RabbitmqSpec struct {
@@ -56,6 +66,7 @@ type RabbitmqSpec struct {
 	RabbitmqVolumeSize          resource.Quantity   `json:"volumeSize"`
 	RabbitmqPodRequests         corev1.ResourceList `json:"podRequests,omitempty"`
 	RabbitmqPodLimits           corev1.ResourceList `json:"podLimits,omitempty"`
+	RabbitmqPolicies            []RabbitmqPolicy    `json:"policies"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq
