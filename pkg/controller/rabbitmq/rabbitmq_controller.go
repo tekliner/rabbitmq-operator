@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -127,12 +126,38 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	// statefulset already exists - don't requeue
 	reqLogger.Info("Skip reconcile: statefulset already exists", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 
+	// creating services
+	_, err = r.reconcileEpmdService(reqLogger, instance)
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	_, err = r.reconcileHTTPService(reqLogger, instance)
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	_, err = r.reconcileNodeService(reqLogger, instance)
+
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// set policies
 	timeout, _ := time.ParseDuration("30")
+	timeoutFlag := false
 	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
 	defer ctxCancelTimeout()
 	go setPolicies(ctx, instance)
-
+	for {
+		if timeoutFlag {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			timeoutFlag = true
+		}
+	}
 	return reconcile.Result{}, nil
 
 }
@@ -257,94 +282,4 @@ func setPolicies(ctx context.Context, cr *rabbitmqv1.Rabbitmq) {
 		reqLogger.Info("Adding policy " + policy.Name + ", URL: " + url + ", JSON: " + string(policyJSON))
 		putPolicy(url, policyJSON)
 	}
-}
-
-func newEpmdService(cr *rabbitmqv1.Rabbitmq) *corev1.Service {
-	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
-	}
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-empd",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: labels,
-			Ports: []corev1.ServicePort{
-				{
-					TargetPort: intstr.IntOrString{IntVal: 4369},
-					Port:       4369,
-					Protocol:   corev1.ProtocolTCP,
-					Name:       "empd",
-				},
-			},
-		},
-	}
-
-	return service
-}
-
-func newNodeService(cr *rabbitmqv1.Rabbitmq) *corev1.Service {
-	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
-	}
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-node",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: labels,
-			Ports: []corev1.ServicePort{
-				{
-					TargetPort: intstr.IntOrString{IntVal: 5672},
-					Port:       5672,
-					Protocol:   corev1.ProtocolTCP,
-					Name:       "node",
-				},
-			},
-		},
-	}
-
-	return service
-}
-
-func newHTTPService(cr *rabbitmqv1.Rabbitmq) *corev1.Service {
-	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
-	}
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-api",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: labels,
-			Ports: []corev1.ServicePort{
-				{
-					TargetPort: intstr.IntOrString{IntVal: 15672},
-					Port:       15672,
-					Protocol:   corev1.ProtocolTCP,
-					Name:       "api",
-				},
-			},
-		},
-	}
-
-	return service
 }
