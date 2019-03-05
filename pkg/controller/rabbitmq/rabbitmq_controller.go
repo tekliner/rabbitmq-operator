@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/go-logr/logr"
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -148,7 +149,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	timeoutFlag := false
 	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
 	defer ctxCancelTimeout()
-	go setPolicies(ctx, instance)
+	go setPolicies(ctx, reqLogger, instance)
 	for {
 		if timeoutFlag {
 			break
@@ -228,13 +229,8 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 	}
 }
 
-// sendPolicy send policy to api port
-func putPolicy(url string, policy []byte) {
-	// send request
-}
-
 // cleanPolicies return policies and remove all by name, no other method supported
-func cleanPolicies(apiService string, cr *rabbitmqv1.Rabbitmq) {
+func cleanPolicies(apiService string, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) {
 	url := apiService + "/api/policies"
 
 	// request will return something like that:
@@ -255,9 +251,7 @@ func cleanPolicies(apiService string, cr *rabbitmqv1.Rabbitmq) {
 }
 
 // setPolicies run as go routine
-func setPolicies(ctx context.Context, cr *rabbitmqv1.Rabbitmq) {
-
-	reqLogger := log.WithValues("Request.Namespace", cr.Namespace, "Request.Name", cr.Name)
+func setPolicies(ctx context.Context, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) {
 	reqLogger.Info("Setting up policies")
 
 	// wait http connection to api port
@@ -272,7 +266,7 @@ func setPolicies(ctx context.Context, cr *rabbitmqv1.Rabbitmq) {
 	}
 
 	//clean rabbit before fulfilling policies list
-	cleanPolicies(apiService, cr)
+	cleanPolicies(apiService, reqLogger, cr)
 
 	//fulfill policies list
 	for _, policy := range cr.Spec.RabbitmqPolicies {
@@ -280,6 +274,6 @@ func setPolicies(ctx context.Context, cr *rabbitmqv1.Rabbitmq) {
 		url := apiService + "/api/policies/" + cr.Name + "/" + policy.Name
 		// send policy to api service
 		reqLogger.Info("Adding policy " + policy.Name + ", URL: " + url + ", JSON: " + string(policyJSON))
-		putPolicy(url, policyJSON)
+		putRequest(url, string(policyJSON))
 	}
 }

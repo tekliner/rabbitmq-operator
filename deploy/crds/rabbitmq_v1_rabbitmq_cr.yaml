@@ -14,7 +14,7 @@ spec:
       pattern: ".*"
       definition: 
         ha-mode: exactly
-        ha-params: 3
+        ha-params: "3"
         ha-sync-mode: automatic
-      priority: 0
+      priority: 1
       applyto: all
