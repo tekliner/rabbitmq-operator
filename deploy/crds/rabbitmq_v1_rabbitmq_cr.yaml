@@ -1,3 +1,4 @@
+---
 apiVersion: rabbitmq.improvado.io/v1
 kind: Rabbitmq
 metadata:
@@ -7,8 +8,14 @@ spec:
   image:
     name: rabbitmq
     tag: 3-alpine
-  rabbitmqUsername: rabbituser
-  volumeSize: 1Gi
+  default_username: "rabbit"
+  default_vhost: "rabbit"
+  default_password: "rabbit"
+  memory_high_watermark: 256M
+  k8s_host: "kubernetes.default.svc.cluster.imp"
+  k8s_addrtype: hostname
+  cluster_node_cleanup_interval: 10
+  volume_size: 1Gi
   policies:
     - name: ha-three
       pattern: ".*"

@@ -2,11 +2,8 @@ package rabbitmq
 
 import (
 	"context"
-	"encoding/json"
-	"net"
 	"time"
 
-	"github.com/go-logr/logr"
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 	"k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -128,23 +125,33 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	reqLogger.Info("Skip reconcile: statefulset already exists", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 
 	// creating services
+	reqLogger.Info("Reconciling services")
+
 	_, err = r.reconcileEpmdService(reqLogger, instance)
-
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
 	_, err = r.reconcileHTTPService(reqLogger, instance)
-
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	_, err = r.reconcileNodeService(reqLogger, instance)
 
+	_, err = r.reconcileNodeService(reqLogger, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// configmap
+	reqLogger.Info("Reconciling configmap")
+
+	_, err = r.reconcileConfigMap(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// set policies
+	reqLogger.Info("Setting up policies")
 	timeout, _ := time.ParseDuration("30")
 	timeoutFlag := false
 	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
@@ -159,6 +166,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 			timeoutFlag = true
 		}
 	}
+
 	return reconcile.Result{}, nil
 
 }
@@ -178,8 +186,8 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			Containers: []corev1.Container{
 				{
 					Name:  "rabbitmq",
-					Image: cr.Spec.Image.Name + ":" + cr.Spec.Image.Tag,
-					Env:   cr.Spec.ENV,
+					Image: cr.Spec.K8SImage.Name + ":" + cr.Spec.K8SImage.Tag,
+					Env:   cr.Spec.K8SENV,
 					Resources: corev1.ResourceRequirements{
 						Requests: cr.Spec.RabbitmqPodRequests,
 						Limits:   cr.Spec.RabbitmqPodLimits,
@@ -188,6 +196,22 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 						{
 							Name:      "rabbit-data",
 							MountPath: "/var/lib/rabbitmq",
+						},
+						{
+							Name:      "rabbit-config",
+							MountPath: "/etc/rabbitmq",
+						},
+					},
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "rabbit-config",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: cr.Name,
+							},
 						},
 					},
 				},
@@ -226,54 +250,5 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 				Type: v1.RollingUpdateStatefulSetStrategyType,
 			},
 		},
-	}
-}
-
-// cleanPolicies return policies and remove all by name, no other method supported
-func cleanPolicies(apiService string, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) {
-	url := apiService + "/api/policies"
-
-	// request will return something like that:
-	// [{"vhost":"dts","name":"ha-three","pattern":".*","apply-to":"all","definition":
-	//{"ha-mode":"exactly","ha-params":3,"ha-sync-mode":"automatic"},"priority":0}]
-
-	response := getRequest(url)
-	var policies []rabbitmqv1.RabbitmqPolicy
-	err := json.Unmarshal(response, &policies)
-	if err != nil {
-		// something bad
-	}
-
-	for _, policyRecord := range policies {
-		deleteRequest(apiService + "/" + policyRecord.Vhost + "/" + policyRecord.Name)
-	}
-
-}
-
-// setPolicies run as go routine
-func setPolicies(ctx context.Context, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) {
-	reqLogger.Info("Setting up policies")
-
-	// wait http connection to api port
-	timeout := time.Duration(5 * time.Second)
-	apiService := cr.Name + "-node:5672"
-
-	for {
-		_, err := net.DialTimeout("tcp", apiService, timeout)
-		if err != nil {
-			break
-		}
-	}
-
-	//clean rabbit before fulfilling policies list
-	cleanPolicies(apiService, reqLogger, cr)
-
-	//fulfill policies list
-	for _, policy := range cr.Spec.RabbitmqPolicies {
-		policyJSON, _ := json.Marshal(policy)
-		url := apiService + "/api/policies/" + cr.Name + "/" + policy.Name
-		// send policy to api service
-		reqLogger.Info("Adding policy " + policy.Name + ", URL: " + url + ", JSON: " + string(policyJSON))
-		putRequest(url, string(policyJSON))
 	}
 }
