@@ -13,7 +13,7 @@ import (
 // cleanPolicies return policies and remove all by name, no other method supported
 func cleanPolicies(apiService string, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) {
 	url := apiService + "/api/policies"
-
+	reqLogger.Info("Removing all policies:")
 	// request will return something like that:
 	// [{"vhost":"dts","name":"ha-three","pattern":".*","apply-to":"all","definition":
 	//{"ha-mode":"exactly","ha-params":3,"ha-sync-mode":"automatic"},"priority":0}]
@@ -23,20 +23,21 @@ func cleanPolicies(apiService string, reqLogger logr.Logger, cr *rabbitmqv1.Rabb
 	err := json.Unmarshal(response, &policies)
 	if err != nil {
 		// something bad
+		reqLogger.Info("Error parsing json!", err)
+	} else {
+		for _, policyRecord := range policies {
+			deleteRequest(apiService + "/" + policyRecord.Vhost + "/" + policyRecord.Name)
+			reqLogger.Info("Removing " + policyRecord.Name)
+		}
 	}
-
-	for _, policyRecord := range policies {
-		deleteRequest(apiService + "/" + policyRecord.Vhost + "/" + policyRecord.Name)
-	}
-
 }
 
 // setPolicies run as go routine
 func setPolicies(ctx context.Context, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) {
 	// wait http connection to api port
 	timeout := time.Duration(5 * time.Second)
-	apiService := cr.Name + "-node:15672"
-
+	apiService := "http://" + cr.Name + "-api:15672"
+	reqLogger.Info("Using API service: " + apiService)
 	for {
 		_, err := net.DialTimeout("tcp", apiService, timeout)
 		if err != nil {
@@ -47,6 +48,8 @@ func setPolicies(ctx context.Context, reqLogger logr.Logger, cr *rabbitmqv1.Rabb
 
 	//clean rabbit before fulfilling policies list
 	cleanPolicies(apiService, reqLogger, cr)
+
+	reqLogger.Info("Found policies", cr.Spec.RabbitmqPolicies)
 
 	//fulfill policies list
 	for _, policy := range cr.Spec.RabbitmqPolicies {

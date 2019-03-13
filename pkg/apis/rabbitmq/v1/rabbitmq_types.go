@@ -46,15 +46,21 @@ type RabbitmqPolicy struct {
 	ApplyTo    string            `json:"apply-to"`
 }
 
+// // RabbitmqCredentials sets credentials
+// type RabbitmqCredentials struct {
+// 	User     string `json:"username"`
+// 	Password string `json:"password"`
+// }
+
 // RabbitmqSpec defines the desired state of Rabbitmq
 // +k8s:openapi-gen=true
 type RabbitmqSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=10
 	RabbitmqReplicas                    int32                  `json:"replicas"`
-	RabbitmqUsername                    string                 `json:"default_username"`
 	RabbitmqVhost                       string                 `json:"default_vhost,omitempty"`
-	RabbitmqPassword                    string                 `json:"default_password,omitempty"`
+	RabbitmqSecretCredentials           string                 `json:"secret_credentials,omitempty"`
+	RabbitmqSecretServiceAccount        string                 `json:"secret_service_account,omitempty"`
 	RabbitmqMemoryHighWatermark         string                 `json:"memory_high_watermark,omitempty"`
 	RabbitmqHipeCompile                 bool                   `json:"hipe_compile,omitempty"`
 	K8SImage                            RabbitmqImage          `json:"image"`
@@ -72,6 +78,7 @@ type RabbitmqSpec struct {
 	RabbitmqClusterFormationNodeCleanup int64                  `json:"cluster_node_cleanup_interval"`
 	RabbitmqClusterPartitionHandling    string                 `json:"cluster_partition_handling"`
 	RabbitmqPlugins                     []string               `json:"plugins"`
+	RabbitmqCredentials                 map[string][]byte      `json:"credentials"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq

@@ -16,10 +16,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+type templateDataStruct struct {
+	Spec            rabbitmqv1.RabbitmqSpec
+	DefaultUser     string
+	DefaultPassword string
+}
+
 const defaultRabbitmqConfig = `# RabbitMQ operator templated config
-default_user = {{ .Spec.RabbitmqUsername | default "rabbit" }}
+default_user = {{ .DefaultUser | default "rabbit" }}
+default_pass = {{ .DefaultPassword | default "rabbit" }}
 default_vhost = {{ .Spec.RabbitmqVhost | default "rabbit" }}
-default_pass = {{ .Spec.RabbitmqPassword | default "rabbit" }}
 
 cluster_formation.peer_discovery_backend  = {{ .Spec.RabbitmqK8SPeerDiscoveryBackend | default "rabbit_peer_discovery_k8s" }}
 cluster_formation.k8s.host = {{ .Spec.RabbitmqK8SHost | default "kubernetes.default.svc.cluster.local" }}
@@ -45,7 +51,7 @@ rabbitmq_shovel_management
 {{end}}].
 `
 
-func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr *rabbitmqv1.Rabbitmq) (string, error) {
+func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr templateDataStruct) (string, error) {
 	var buf bytes.Buffer
 	templateObj, err := gtf.New("config").Parse(templateContent)
 	if err != nil {
@@ -59,9 +65,40 @@ func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr *rabb
 }
 
 func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
+	var err error
+	var templateData templateDataStruct
+	secretObj := corev1.Secret{}
 
-	resultConfig, _ := applyDataOnTemplate(reqLogger, defaultRabbitmqConfig, cr)
-	resultPlugins, _ := applyDataOnTemplate(reqLogger, defaultRabbitmqPlugins, cr)
+	// detect right secret name
+	secretNameSA := cr.Name + "-service-account"
+	if cr.Spec.RabbitmqSecretServiceAccount != "" {
+		secretObj, err = r.getSecret(cr.Spec.RabbitmqSecretServiceAccount, cr.Namespace)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		secretNameSA = cr.Spec.RabbitmqSecretServiceAccount
+	}
+
+	secretObj, err = r.getSecret(secretNameSA, cr.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	defaultUsername, err := secretDecode(secretObj.Data["username"])
+	templateData.DefaultUser = defaultUsername
+	defaultPassword, err := secretDecode(secretObj.Data["password"])
+	templateData.DefaultPassword = defaultPassword
+
+	templateData.Spec = cr.Spec
+
+	resultConfig, err := applyDataOnTemplate(reqLogger, defaultRabbitmqConfig, templateData)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	resultPlugins, err := applyDataOnTemplate(reqLogger, defaultRabbitmqPlugins, templateData)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	labels := map[string]string{
 		"rabbitmq.improvado.io/app":       "rabbitmq",
@@ -86,7 +123,7 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 	}
 
 	found := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: configmap.Name, Namespace: configmap.Namespace}, found)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: configmap.Name, Namespace: configmap.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 		reqLogger.Info("Reconciling ConfigMap", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		err = r.client.Create(context.TODO(), configmap)
@@ -94,6 +131,7 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}

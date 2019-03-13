@@ -14,8 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -59,6 +61,57 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		IsController: true,
 		OwnerType:    &rabbitmqv1.Rabbitmq{},
 	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary resource StatefulSets and requeue the owner Dsas
+	err = c.Watch(&source.Kind{Type: &v1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
+		OwnerType: &rabbitmqv1.Rabbitmq{},
+	})
+
+	mapFn := handler.ToRequestsFunc(
+		func(a handler.MapObject) []reconcile.Request {
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{
+					Name:      a.Meta.GetName() + "-1",
+					Namespace: a.Meta.GetNamespace(),
+				}},
+				{NamespacedName: types.NamespacedName{
+					Name:      a.Meta.GetName() + "-2",
+					Namespace: a.Meta.GetNamespace(),
+				}},
+			}
+		})
+
+	p := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// The object doesn't contain label "foo", so the event will be
+			// ignored.
+			if _, ok := e.MetaOld.GetLabels()["rabbitmq.improvado.io/name"]; !ok {
+				return false
+			}
+			return e.ObjectOld != e.ObjectNew
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			if _, ok := e.Meta.GetLabels()["rabbitmq.improvado.io/name"]; !ok {
+				return false
+			}
+			return true
+		},
+	}
+
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: mapFn,
+		},
+		// Comment it if default predicate fun is used.
+		p)
+	if err != nil {
+		return err
+	}
+
 	if err != nil {
 		return err
 	}
@@ -142,6 +195,13 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// check administrator username and password
+	reqLogger.Info("Reconciling secrets")
+	_, err = r.reconcileSecrets(reqLogger, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// configmap
 	reqLogger.Info("Reconciling configmap")
 
@@ -151,19 +211,22 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// set policies
-	reqLogger.Info("Setting up policies")
-	timeout, _ := time.ParseDuration("30")
-	timeoutFlag := false
-	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
-	defer ctxCancelTimeout()
-	go setPolicies(ctx, reqLogger, instance)
-	for {
-		if timeoutFlag {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			timeoutFlag = true
+	reqLogger.Info("Checking policies existance")
+	if instance.Spec.RabbitmqPolicies != nil {
+		reqLogger.Info("Setting up policies")
+		timeout, _ := time.ParseDuration("30")
+		timeoutFlag := false
+		ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
+		defer ctxCancelTimeout()
+		go setPolicies(ctx, reqLogger, instance)
+		for {
+			if timeoutFlag {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				timeoutFlag = true
+			}
 		}
 	}
 

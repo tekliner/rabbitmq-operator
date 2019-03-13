@@ -226,6 +226,21 @@ func (in *RabbitmqSpec) DeepCopyInto(out *RabbitmqSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.RabbitmqCredentials != nil {
+		in, out := &in.RabbitmqCredentials, &out.RabbitmqCredentials
+		*out = make(map[string][]byte, len(*in))
+		for key, val := range *in {
+			var outVal []byte
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = make([]byte, len(*in))
+				copy(*out, *in)
+			}
+			(*out)[key] = outVal
+		}
+	}
 	return
 }
 
