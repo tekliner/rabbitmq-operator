@@ -64,22 +64,12 @@ func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr templ
 	return buf.String(), err
 }
 
-func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
+func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) (reconcile.Result, error) {
 	var err error
 	var templateData templateDataStruct
+
 	secretObj := corev1.Secret{}
-
-	// detect right secret name
-	secretNameSA := cr.Name + "-service-account"
-	if cr.Spec.RabbitmqSecretServiceAccount != "" {
-		secretObj, err = r.getSecret(cr.Spec.RabbitmqSecretServiceAccount, cr.Namespace)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		secretNameSA = cr.Spec.RabbitmqSecretServiceAccount
-	}
-
-	secretObj, err = r.getSecret(secretNameSA, cr.Namespace)
+	secretObj, err = r.getSecret(secretNames.ServiceAccount, cr.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

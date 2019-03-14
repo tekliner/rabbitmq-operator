@@ -58,6 +58,7 @@ type RabbitmqSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=10
 	RabbitmqReplicas                    int32                  `json:"replicas"`
+	RabbitmqCookie                      string                 `json:"cookie"`
 	RabbitmqVhost                       string                 `json:"default_vhost,omitempty"`
 	RabbitmqSecretCredentials           string                 `json:"secret_credentials,omitempty"`
 	RabbitmqSecretServiceAccount        string                 `json:"secret_service_account,omitempty"`

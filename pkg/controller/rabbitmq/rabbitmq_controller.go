@@ -121,6 +121,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 var _ reconcile.Reconciler = &ReconcileRabbitmq{}
 
+type secretResouces struct {
+	ServiceAccount string
+	Credentials    string
+}
+
 // ReconcileRabbitmq reconciles a Rabbitmq object
 type ReconcileRabbitmq struct {
 	// This client, initialized using mgr.Client() above, is a split client
@@ -174,8 +179,11 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// statefulset already exists - don't requeue
-	reqLogger.Info("Skip reconcile: statefulset already exists", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
+	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
+	if err = r.client.Update(context.TODO(), statefulset); err != nil {
+		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
+		return reconcile.Result{}, err
+	}
 
 	// creating services
 	reqLogger.Info("Reconciling services")
@@ -197,7 +205,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	// check administrator username and password
 	reqLogger.Info("Reconciling secrets")
-	_, err = r.reconcileSecrets(reqLogger, instance)
+	secretNames, err := r.reconcileSecrets(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -205,7 +213,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	// configmap
 	reqLogger.Info("Reconciling configmap")
 
-	_, err = r.reconcileConfigMap(reqLogger, instance)
+	_, err = r.reconcileConfigMap(reqLogger, instance, secretNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func secretEncode(plaintextSecret string) string {
@@ -29,7 +28,9 @@ func (r *ReconcileRabbitmq) getSecret(name string, namespace string) (corev1.Sec
 	return secretObj, err
 }
 
-func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
+func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (secretResouces, error) {
+
+	var secretNames secretResouces
 
 	labels := map[string]string{
 		"rabbitmq.improvado.io/app":       "rabbitmq",
@@ -38,8 +39,8 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 	}
 
 	// standart resource names
-	secretNameSA := cr.Name + "-service-account"
-	secretNameCredentials := cr.Name + "-credentials"
+	secretNames.ServiceAccount = cr.Name + "-service-account"
+	secretNames.Credentials = cr.Name + "-credentials"
 
 	/////////////////////////////////////////////////////////////////
 	// SERVICE ACCOUNT SECRET, CREATING ONCE AT RABBIT INSTALL
@@ -48,8 +49,9 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 	// check existance of linked or standart service account secret
 	createServiceAccount := false
 	if cr.Spec.RabbitmqSecretServiceAccount != "" {
+		secretNames.ServiceAccount = cr.Spec.RabbitmqSecretServiceAccount
 		secretSAResource := &corev1.Secret{}
-		err := r.client.Get(context.TODO(), types.NamespacedName{Name: cr.Spec.RabbitmqSecretServiceAccount, Namespace: cr.Namespace}, secretSAResource)
+		err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.ServiceAccount, Namespace: cr.Namespace}, secretSAResource)
 
 		if err != nil && apierrors.IsNotFound(err) {
 			// not found! create new service account
@@ -58,14 +60,13 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("Service Account linked: error happend", err)
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
-		secretNameSA = cr.Spec.RabbitmqSecretServiceAccount
 	} else {
 		// link empty, search standart service account secret
 		reqLogger.Info("Service Account: search for standart resource")
 		secretSAResource := &corev1.Secret{}
-		err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNameSA, Namespace: cr.Namespace}, secretSAResource)
+		err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.ServiceAccount, Namespace: cr.Namespace}, secretSAResource)
 
 		if err != nil && apierrors.IsNotFound(err) {
 			// not found! create new service account
@@ -74,16 +75,16 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("Service Account standart: error happend", err)
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
 	}
 
 	// create service account with standart name
 	if createServiceAccount {
-		reqLogger.Info("Creating new service account secret", "Namespace", cr.Namespace, "Name", secretNameSA)
+		reqLogger.Info("Creating new service account secret", "Namespace", cr.Namespace, "Name", secretNames.ServiceAccount)
 		secretSAResource := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretNameSA,
+				Name:      secretNames.ServiceAccount,
 				Namespace: cr.Namespace,
 				Labels:    labels,
 			},
@@ -94,13 +95,13 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		}
 
 		if err := controllerutil.SetControllerReference(cr, secretSAResource, r.scheme); err != nil {
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
 
 		err := r.client.Create(context.TODO(), secretSAResource)
 
 		if err != nil {
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
 
 	}
@@ -123,14 +124,14 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("User credentials: error happend", err)
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
-		secretNameCredentials = cr.Spec.RabbitmqSecretCredentials
+		secretNames.Credentials = cr.Spec.RabbitmqSecretCredentials
 	} else {
 		// link empty, search standart credentials secret
 		reqLogger.Info("User credentials: search for standart resource")
 		secretCredResource := &corev1.Secret{}
-		err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNameCredentials, Namespace: cr.Namespace}, secretCredResource)
+		err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.Credentials, Namespace: cr.Namespace}, secretCredResource)
 
 		if err != nil && apierrors.IsNotFound(err) {
 			// not found! create new service account
@@ -139,16 +140,16 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("User credentials standart: error happend", err)
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
 	}
 
 	// create credentials secret
 	if createCredentialsSecret {
-		reqLogger.Info("Creating new user credentials secret", "Namespace", cr.Namespace, "Name", secretNameCredentials)
+		reqLogger.Info("Creating new user credentials secret", "Namespace", cr.Namespace, "Name", secretNames.Credentials)
 		secretCredResource := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretNameCredentials,
+				Name:      secretNames.Credentials,
 				Namespace: cr.Namespace,
 				Labels:    labels,
 			},
@@ -156,21 +157,21 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		}
 
 		if err := controllerutil.SetControllerReference(cr, secretCredResource, r.scheme); err != nil {
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
 
 		err := r.client.Create(context.TODO(), secretCredResource)
 		if err != nil {
-			return reconcile.Result{}, err
+			return secretNames, err
 		}
 
 	}
 
 	// // try to fetch exiting credentials secret
 	// exitingCredSecret := &corev1.Secret{}
-	// err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNameCredentials, Namespace: cr.Namespace}, exitingCredSecret)
+	// err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.Credentials, Namespace: cr.Namespace}, exitingCredSecret)
 	// if err != nil {
-	// 	reqLogger.Info("Something went terribly wrong! Credentials secret not found!", "Secret name", secretNameCredentials, err)
+	// 	reqLogger.Info("Something went terribly wrong! Credentials secret not found!", "Secret name", secretNames.Credentials, err)
 	// 	return reconcile.Result{}, err
 	// }
 
@@ -197,7 +198,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 	// 	return reconcile.Result{}, err
 	// }
 
-	return reconcile.Result{}, nil
+	return secretNames, nil
 }
 
 func randomString(len int) string {
