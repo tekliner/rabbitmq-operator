@@ -32,12 +32,6 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 
 	var secretNames secretResouces
 
-	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
-	}
-
 	// standart resource names
 	secretNames.ServiceAccount = cr.Name + "-service-account"
 	secretNames.Credentials = cr.Name + "-credentials"
@@ -86,11 +80,12 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretNames.ServiceAccount,
 				Namespace: cr.Namespace,
-				Labels:    labels,
+				Labels:    returnLabels(cr),
 			},
 			Data: map[string][]byte{
 				"username": []byte("sa"),
 				"password": []byte(secretEncode(randomString(30))),
+				"cookie":   []byte(secretEncode(randomString(30))),
 			},
 		}
 
@@ -151,7 +146,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretNames.Credentials,
 				Namespace: cr.Namespace,
-				Labels:    labels,
+				Labels:    returnLabels(cr),
 			},
 			Data: map[string][]byte{},
 		}
@@ -201,38 +196,11 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 	return secretNames, nil
 }
 
-func randomString(len int) string {
-	bytes := make([]byte, len)
-	for i := 0; i < len; i++ {
-		bytes[i] = byte(65 + rand.Intn(25)) //A=65 and Z = 65+25
+func randomString(l int) string {
+	var letterRunes = []rune("ABCDEFGHIJKLMNOabcdefghijklmn67890PQRSTUVWXYZ12345opqrstuvwxyz")
+	b := make([]rune, l)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
-	return string(bytes)
-}
-
-func searchDifference(slice1 []string, slice2 []string) []string {
-	var diff []string
-
-	// Loop two times, first to find slice1 strings not in slice2,
-	// second loop to find slice2 strings not in slice1
-	for i := 0; i < 2; i++ {
-		for _, s1 := range slice1 {
-			found := false
-			for _, s2 := range slice2 {
-				if s1 == s2 {
-					found = true
-					break
-				}
-			}
-			// String not found. We add it to return slice
-			if !found {
-				diff = append(diff, s1)
-			}
-		}
-		// Swap the slices, only if it was the first loop
-		if i == 0 {
-			slice1, slice2 = slice2, slice1
-		}
-	}
-
-	return diff
+	return string(b)
 }

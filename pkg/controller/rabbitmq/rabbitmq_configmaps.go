@@ -65,12 +65,15 @@ func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr templ
 }
 
 func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) (reconcile.Result, error) {
+	reqLogger.Info("Started reconciling Configmap", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name)
 	var err error
 	var templateData templateDataStruct
 
 	secretObj := corev1.Secret{}
+	reqLogger.Info("Configmap receiving secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret name", secretNames.ServiceAccount)
 	secretObj, err = r.getSecret(secretNames.ServiceAccount, cr.Namespace)
 	if err != nil {
+		reqLogger.Info("Configmap can't receive secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret name", secretNames.ServiceAccount)
 		return reconcile.Result{}, err
 	}
 
@@ -78,6 +81,8 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 	templateData.DefaultUser = defaultUsername
 	defaultPassword, err := secretDecode(secretObj.Data["password"])
 	templateData.DefaultPassword = defaultPassword
+	cookieData, err := secretDecode(secretObj.Data["cookie"])
+	reqLogger.Info("Configmap decoded secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret decoded", cookieData)
 
 	templateData.Spec = cr.Spec
 
@@ -90,49 +95,51 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 		return reconcile.Result{}, err
 	}
 
-	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
-	}
-
 	configmap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
-			Labels:    labels,
+			Labels:    returnLabels(cr),
 		},
 		Data: map[string]string{
 			"rabbitmq.conf":   resultConfig,
 			"enabled_plugins": resultPlugins,
+			"cookie":          cookieData,
 		},
 	}
 
 	if err := controllerutil.SetControllerReference(cr, configmap, r.scheme); err != nil {
+		reqLogger.Info("Configmap can't set controller reference", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		return reconcile.Result{}, err
 	}
 
 	found := &corev1.ConfigMap{}
+	reqLogger.Info("Trying to receive configmap", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: configmap.Name, Namespace: configmap.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
-		reqLogger.Info("Reconciling ConfigMap", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
+		reqLogger.Info("Creating ConfigMap", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		err = r.client.Create(context.TODO(), configmap)
 
 		if err != nil {
+			reqLogger.Info("Creating ConfigMap error", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 			return reconcile.Result{}, err
 		}
 
 	} else if err != nil {
+		reqLogger.Info("Unknown error while getting ConfigMap", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		return reconcile.Result{}, err
 	}
 
 	if !reflect.DeepEqual(found.Data, configmap.Data) {
+		reqLogger.Info("Configmap not equal to received", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		found.Data = configmap.Data
 	}
 
 	if err = r.client.Update(context.TODO(), found); err != nil {
+		reqLogger.Info("Configmap can't be updated", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		return reconcile.Result{}, err
 	}
 
+	reqLogger.Info("Configmap successfuly reconciled", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 	return reconcile.Result{}, nil
 }

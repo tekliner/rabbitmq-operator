@@ -86,7 +86,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	p := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// The object doesn't contain label "foo", so the event will be
+			// The object doesn"t contain label "foo", so the event will be
 			// ignored.
 			if _, ok := e.MetaOld.GetLabels()["rabbitmq.improvado.io/name"]; !ok {
 				return false
@@ -141,9 +141,19 @@ type ReconcileRabbitmq struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+
+func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
+	labels := map[string]string{
+		"rabbitmq.improvado.io/app":       "rabbitmq",
+		"rabbitmq.improvado.io/name":      cr.Name,
+		"rabbitmq.improvado.io/component": "messaging",
+	}
+	return labels
+}
+
 func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling Rabbitmq")
+	reqLogger.Info("Reconciling Rabbitmq v1")
 
 	// Fetch the Rabbitmq instance
 	instance := &rabbitmqv1.Rabbitmq{}
@@ -198,7 +208,12 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	_, err = r.reconcileNodeService(reqLogger, instance)
+	_, err = r.reconcileAmqpService(reqLogger, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	_, err = r.reconcileDiscoveryService(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -242,23 +257,61 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 
 }
 
+func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.EnvVar {
+	return append(env,
+		corev1.EnvVar{
+			Name:  "RABBITMQ_USE_LONGNAME",
+			Value: "true",
+		},
+		corev1.EnvVar{
+			Name: "MY_POD_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		corev1.EnvVar{
+			Name:  "RABBITMQ_NODENAME",
+			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + ".svc.cluster.imp",
+		},
+		corev1.EnvVar{
+			Name:  "K8S_SERVICE_NAME",
+			Value: cr.Name + "-discovery",
+		},
+	)
+}
+
 func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
-	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
-	}
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: labels,
+			Labels: returnLabels(cr),
 		},
 		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{
+					Name:    "copy-rabbitmq-config",
+					Image:   "busybox",
+					Command: []string{"sh", "-c", "cp /rabbit-cookie/* /etc/rabbitmq/; rm -f /var/lib/rabbitmq/.erlang.cookie"},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "rabbit-config",
+							MountPath: "/rabbit-cookie/.erlang.cookie",
+							SubPath:   "cookie",
+						},
+						{
+							Name:      "rabbit-data",
+							MountPath: "/var/lib/rabbitmq",
+						},
+					},
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:  "rabbitmq",
 					Image: cr.Spec.K8SImage.Name + ":" + cr.Spec.K8SImage.Tag,
-					Env:   cr.Spec.K8SENV,
+					Env:   appendNodeVariables(cr.Spec.K8SENV, cr),
 					Resources: corev1.ResourceRequirements{
 						Requests: cr.Spec.RabbitmqPodRequests,
 						Limits:   cr.Spec.RabbitmqPodLimits,
@@ -270,7 +323,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 						},
 						{
 							Name:      "rabbit-config",
-							MountPath: "/etc/rabbitmq",
+							MountPath: "/rabbit-config",
 						},
 					},
 				},
@@ -308,12 +361,13 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
-			Labels:    labels,
+			Labels:    returnLabels(cr),
 		},
 		Spec: v1.StatefulSetSpec{
-			Replicas: &cr.Spec.RabbitmqReplicas,
+			Replicas:    &cr.Spec.RabbitmqReplicas,
+			ServiceName: cr.Name + "-discovery",
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: returnLabels(cr),
 			},
 			Template:             podTemplate,
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{PVCTemplate},
