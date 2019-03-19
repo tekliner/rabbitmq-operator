@@ -2,7 +2,7 @@
 
 Kubernetes operator for RabbitMQ
 
-Sample CRD:
+Sample CRD (whole specs see in rabbitmq_types.go):
 ```
 ---
 apiVersion: rabbitmq.improvado.io/v1
@@ -14,13 +14,22 @@ spec:
   image:
     name: rabbitmq
     tag: 3-alpine
+  
+  # do not use default secret names
   #secret_credentials: rabbit-users
   #secret_service_account: rabbit-service
+  
   memory_high_watermark: 256M
+  
+  # clusterize rabbit
   k8s_host: "kubernetes.default.svc.cluster.imp"
   k8s_addrtype: hostname
   cluster_node_cleanup_interval: 10
+  
+  # PVC
   volume_size: 1Gi
+  
+  # you know 
 #  policies:
 #    - name: ha-three
 #      vhost: "rabbit"
