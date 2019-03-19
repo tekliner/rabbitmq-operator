@@ -36,26 +36,61 @@ type RabbitmqManagementPlugin struct {
 	Enabled bool `json:"enabled"`
 }
 
+// RabbitmqPolicy type
+type RabbitmqPolicy struct {
+	Vhost      string                   `json:"vhost,omitempty"`
+	Name       string                   `json:"name"`
+	Pattern    string                   `json:"pattern"`
+	Definition RabbitmqPolicyDefinition `json:"definition"`
+	Priority   int64                    `json:"priority"`
+	ApplyTo    string                   `json:"apply-to"`
+}
+
+// RabbitmqPolicyDefinition type
+type RabbitmqPolicyDefinition struct {
+	FederationUpstreamSet string `json:"federation-upstream-set,omitempty"`
+	HaMode                string `json:"ha-mode,omitempty"`
+	HaParams              int    `json:"ha-params,omitempty"`
+	HaSyncMode            string `json:"ha-sync-mode,omitempty"`
+	Expires               int    `json:"expires,omitempty"`
+	MessageTTL            int    `json:"message-ttl,omitempty"`
+	MaxLen                int    `json:"max-length,omitempty"`
+	MaxLenBytes           int    `json:"max-length-bytes,omitempty"`
+}
+
+// // RabbitmqCredentials sets credentials
+// type RabbitmqCredentials struct {
+// 	User     string `json:"username"`
+// 	Password string `json:"password"`
+// }
+
 // RabbitmqSpec defines the desired state of Rabbitmq
 // +k8s:openapi-gen=true
 type RabbitmqSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=10
-	RabbitmqReplicas            int32               `json:"replicas"`
-	RabbitmqUsername            string              `json:"rabbitmqUsername"`
-	RabbitmqVhost               string              `json:"rabbitmqVhost,omitempty"`
-	RabbitmqMemoryHighWatermark string              `json:"rabbitmqMemoryHighWatermark,omitempty"`
-	RabbitmqEpmdPort            int32               `json:"rabbitmqEpmdPort,omitempty"`
-	RabbitmqNodePort            int32               `json:"rabbitmqNodePort,omitempty"`
-	RabbitmqManagerPort         int32               `json:"rabbitmqManagerPort,omitempty"`
-	RabbitmqHipeCompile         bool                `json:"rabbitmqHipeCompile,omitempty"`
-	Image                       RabbitmqImage       `json:"image"`
-	SSL                         RabbitmqSSL         `json:"rabbitmqCert,omitempty"`
-	RabbitmqAuth                RabbitmqAuth        `json:"rabbitmqAuth,omitempty"`
-	ENV                         []corev1.EnvVar     `json:"env,omitempty"`
-	RabbitmqVolumeSize          resource.Quantity   `json:"volumeSize"`
-	RabbitmqPodRequests         corev1.ResourceList `json:"podRequests,omitempty"`
-	RabbitmqPodLimits           corev1.ResourceList `json:"podLimits,omitempty"`
+	RabbitmqReplicas                    int32                  `json:"replicas"`
+	RabbitmqVhost                       string                 `json:"default_vhost,omitempty"`
+	RabbitmqSecretCredentials           string                 `json:"secret_credentials,omitempty"`
+	RabbitmqSecretServiceAccount        string                 `json:"secret_service_account,omitempty"`
+	RabbitmqMemoryHighWatermark         string                 `json:"memory_high_watermark,omitempty"`
+	RabbitmqHipeCompile                 bool                   `json:"hipe_compile,omitempty"`
+	K8SImage                            RabbitmqImage          `json:"image"`
+	RabbitmqSSL                         RabbitmqSSL            `json:"cert,omitempty"`
+	RabbitmqAuth                        RabbitmqAuth           `json:"auth,omitempty"`
+	K8SENV                              []corev1.EnvVar        `json:"env,omitempty"`
+	K8SLabels                           []metav1.LabelSelector `json:"k8s_labels"`
+	RabbitmqVolumeSize                  resource.Quantity      `json:"volume_size"`
+	RabbitmqPodRequests                 corev1.ResourceList    `json:"pod_requests,omitempty"`
+	RabbitmqPodLimits                   corev1.ResourceList    `json:"pod_limits,omitempty"`
+	RabbitmqPolicies                    []RabbitmqPolicy       `json:"policies"`
+	RabbitmqK8SHost                     string                 `json:"k8s_host"`
+	RabbitmqK8SAddrType                 string                 `json:"k8s_addrtype"`
+	RabbitmqK8SPeerDiscoveryBackend     string                 `json:"k8s_peer_discovery_backend"`
+	RabbitmqClusterFormationNodeCleanup int64                  `json:"cluster_node_cleanup_interval"`
+	RabbitmqClusterPartitionHandling    string                 `json:"cluster_partition_handling"`
+	RabbitmqPlugins                     []string               `json:"plugins"`
+	RabbitmqCredentials                 map[string][]byte      `json:"credentials"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq
