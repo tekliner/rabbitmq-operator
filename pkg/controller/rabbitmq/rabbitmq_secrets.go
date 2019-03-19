@@ -28,6 +28,17 @@ func (r *ReconcileRabbitmq) getSecret(name string, namespace string) (corev1.Sec
 	return secretObj, err
 }
 
+func (r *ReconcileRabbitmq) getSecretData(reqLogger logr.Logger, secretNamespace string, secretName string, secretDataField string) (string, error) {
+	secretObj := corev1.Secret{}
+	reqLogger.Info("Get secret request", "secret namespace", secretNamespace, "secret name", secretName, "secret data field", secretDataField)
+	secretObj, err := r.getSecret(secretName, secretNamespace)
+	if err != nil {
+		reqLogger.Info("Get secret request ERROR", "secret namespace", secretNamespace, "secret name", secretName, "secret data field", secretDataField)
+		return "", err
+	}
+	return string(secretObj.Data[secretDataField]), nil
+}
+
 func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (secretResouces, error) {
 
 	var secretNames secretResouces

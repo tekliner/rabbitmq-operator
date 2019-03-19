@@ -112,8 +112,8 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 		Data: map[string]string{
 			"rabbitmq.conf":   resultConfig,
 			"enabled_plugins": resultPlugins,
-			".erlang.cookie":          cookieData,
-			"init.sh": initRabbitmqScript,
+			".erlang.cookie":  cookieData,
+			"init.sh":         initRabbitmqScript,
 		},
 	}
 

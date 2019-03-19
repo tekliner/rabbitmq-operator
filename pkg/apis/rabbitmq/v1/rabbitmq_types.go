@@ -38,12 +38,24 @@ type RabbitmqManagementPlugin struct {
 
 // RabbitmqPolicy type
 type RabbitmqPolicy struct {
-	Vhost      string            `json:"vhost"`
-	Name       string            `json:"name"`
-	Pattern    string            `json:"pattern"`
-	Definition map[string]string `json:"definition"`
-	Priority   int64             `json:"priority"`
-	ApplyTo    string            `json:"apply-to"`
+	Vhost      string                   `json:"vhost,omitempty"`
+	Name       string                   `json:"name"`
+	Pattern    string                   `json:"pattern"`
+	Definition RabbitmqPolicyDefinition `json:"definition"`
+	Priority   int64                    `json:"priority"`
+	ApplyTo    string                   `json:"apply-to"`
+}
+
+// RabbitmqPolicyDefinition type
+type RabbitmqPolicyDefinition struct {
+	FederationUpstreamSet string `json:"federation-upstream-set,omitempty"`
+	HaMode                string `json:"ha-mode,omitempty"`
+	HaParams              int    `json:"ha-params,omitempty"`
+	HaSyncMode            string `json:"ha-sync-mode,omitempty"`
+	Expires               int    `json:"expires,omitempty"`
+	MessageTTL            int    `json:"message-ttl,omitempty"`
+	MaxLen                int    `json:"max-length,omitempty"`
+	MaxLenBytes           int    `json:"max-length-bytes,omitempty"`
 }
 
 // // RabbitmqCredentials sets credentials

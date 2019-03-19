@@ -151,6 +151,7 @@ func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	return labels
 }
 
+// Reconcile method
 func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Rabbitmq v1")
@@ -234,22 +235,19 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	// set policies
-	reqLogger.Info("Checking policies existance")
-	if instance.Spec.RabbitmqPolicies != nil {
-		reqLogger.Info("Setting up policies")
-		timeout, _ := time.ParseDuration("30")
-		timeoutFlag := false
-		ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
-		defer ctxCancelTimeout()
-		go setPolicies(ctx, reqLogger, instance)
-		for {
-			if timeoutFlag {
-				break
-			}
-			select {
-			case <-ctx.Done():
-				timeoutFlag = true
-			}
+	reqLogger.Info("Setting up policies")
+	timeout, _ := time.ParseDuration("30")
+	timeoutFlag := false
+	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
+	defer ctxCancelTimeout()
+	go r.setPolicies(ctx, reqLogger, instance, secretNames)
+	for {
+		if timeoutFlag {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			timeoutFlag = true
 		}
 	}
 
@@ -265,7 +263,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "K8S_HOSTNAME_SUFFIX",
-			Value: "."+ cr.Name + "-discovery."+ cr.Namespace + ".svc.cluster.imp",
+			Value: "." + cr.Name + "-discovery." + cr.Namespace + ".svc.cluster.imp",
 		},
 		corev1.EnvVar{
 			Name:  "K8S_SERVICE_NAME",
