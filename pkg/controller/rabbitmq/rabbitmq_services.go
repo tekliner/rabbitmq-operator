@@ -31,6 +31,8 @@ func (r *ReconcileRabbitmq) reconcileService(reqLogger logr.Logger, cr *rabbitmq
 		reqLogger.Info("No service found, creating new", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
 		err = r.client.Create(context.TODO(), service)
 
+		found = service
+
 		if err != nil {
 			reqLogger.Info("Error creating new service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
 			return reconcile.Result{}, err

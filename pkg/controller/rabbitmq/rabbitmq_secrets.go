@@ -84,8 +84,8 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 			},
 			Data: map[string][]byte{
 				"username": []byte("sa"),
-				"password": []byte(secretEncode(randomString(30))),
-				"cookie":   []byte(secretEncode(randomString(30))),
+				"password": []byte(randomString(30)),
+				"cookie":   []byte(randomString(30)),
 			},
 		}
 

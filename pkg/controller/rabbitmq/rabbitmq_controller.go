@@ -264,6 +264,14 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 			Value: "true",
 		},
 		corev1.EnvVar{
+			Name:  "K8S_HOSTNAME_SUFFIX",
+			Value: "."+ cr.Name + "-discovery."+ cr.Namespace + ".svc.cluster.imp",
+		},
+		corev1.EnvVar{
+			Name:  "K8S_SERVICE_NAME",
+			Value: cr.Name + "-discovery",
+		},
+		corev1.EnvVar{
 			Name: "MY_POD_NAME",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
@@ -275,10 +283,6 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 			Name:  "RABBITMQ_NODENAME",
 			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + ".svc.cluster.imp",
 		},
-		corev1.EnvVar{
-			Name:  "K8S_SERVICE_NAME",
-			Value: cr.Name + "-discovery",
-		},
 	)
 }
 
@@ -289,16 +293,22 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			Labels: returnLabels(cr),
 		},
 		Spec: corev1.PodSpec{
+			// NOT SECURE!
+			// TODO: MAKE LOW ACCESS LEVEL SA
+			ServiceAccountName: "rabbitmq-operator",
 			InitContainers: []corev1.Container{
 				{
 					Name:    "copy-rabbitmq-config",
 					Image:   "busybox",
-					Command: []string{"sh", "-c", "cp /rabbit-cookie/* /etc/rabbitmq/; rm -f /var/lib/rabbitmq/.erlang.cookie"},
+					Command: []string{"sh", "/rabbit-config/init.sh"},
 					VolumeMounts: []corev1.VolumeMount{
 						{
+							Name:      "rabbit-etc",
+							MountPath: "/etc/rabbitmq",
+						},
+						{
 							Name:      "rabbit-config",
-							MountPath: "/rabbit-cookie/.erlang.cookie",
-							SubPath:   "cookie",
+							MountPath: "/rabbit-config",
 						},
 						{
 							Name:      "rabbit-data",
@@ -317,6 +327,10 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 						Limits:   cr.Spec.RabbitmqPodLimits,
 					},
 					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "rabbit-etc",
+							MountPath: "/etc/rabbitmq",
+						},
 						{
 							Name:      "rabbit-data",
 							MountPath: "/var/lib/rabbitmq",
@@ -337,6 +351,12 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 								Name: cr.Name,
 							},
 						},
+					},
+				},
+				{
+					Name: "rabbit-etc",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				},
 			},

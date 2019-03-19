@@ -51,6 +51,14 @@ rabbitmq_shovel_management
 {{end}}].
 `
 
+const initRabbitmqScript = `# RabbitMQ Init script
+rm -rf /var/lib/rabbitmq/*
+rm -rf /etc/rabbitmq/*
+cp /rabbit-config/* /etc/rabbitmq/
+cp /rabbit-config/.* /etc/rabbitmq/
+chmod 600 /etc/rabbitmq/.erlang.cookie 
+`
+
 func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr templateDataStruct) (string, error) {
 	var buf bytes.Buffer
 	templateObj, err := gtf.New("config").Parse(templateContent)
@@ -77,11 +85,11 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 		return reconcile.Result{}, err
 	}
 
-	defaultUsername, err := secretDecode(secretObj.Data["username"])
+	defaultUsername := string(secretObj.Data["username"])
 	templateData.DefaultUser = defaultUsername
-	defaultPassword, err := secretDecode(secretObj.Data["password"])
+	defaultPassword := string(secretObj.Data["password"])
 	templateData.DefaultPassword = defaultPassword
-	cookieData, err := secretDecode(secretObj.Data["cookie"])
+	cookieData := string(secretObj.Data["cookie"])
 	reqLogger.Info("Configmap decoded secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret decoded", cookieData)
 
 	templateData.Spec = cr.Spec
@@ -104,7 +112,8 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 		Data: map[string]string{
 			"rabbitmq.conf":   resultConfig,
 			"enabled_plugins": resultPlugins,
-			"cookie":          cookieData,
+			".erlang.cookie":          cookieData,
+			"init.sh": initRabbitmqScript,
 		},
 	}
 
@@ -119,6 +128,7 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 	if err != nil && apierrors.IsNotFound(err) {
 		reqLogger.Info("Creating ConfigMap", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)
 		err = r.client.Create(context.TODO(), configmap)
+		found = configmap
 
 		if err != nil {
 			reqLogger.Info("Creating ConfigMap error", "ConfigMap.Namespace", configmap.Namespace, "ConfigMap.Name", configmap.Name)

@@ -4,7 +4,7 @@ kind: Rabbitmq
 metadata:
   name: imp20rabbit
 spec:
-  replicas: 1
+  replicas: 2
   image:
     name: rabbitmq
     tag: 3-alpine
