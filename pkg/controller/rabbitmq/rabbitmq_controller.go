@@ -189,7 +189,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
-
+  
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 	if err = r.client.Update(context.TODO(), statefulset); err != nil {
 		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
@@ -251,7 +251,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 	}
 
-	return reconcile.Result{}, nil
+  return reconcile.Result{}, nil
 
 }
 
