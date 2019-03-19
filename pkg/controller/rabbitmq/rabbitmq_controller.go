@@ -5,7 +5,7 @@ import (
 	"time"
 
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
-	"k8s.io/api/apps/v1"
+	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -189,7 +189,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
-  
+
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 	if err = r.client.Update(context.TODO(), statefulset); err != nil {
 		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
@@ -251,7 +251,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 	}
 
-  return reconcile.Result{}, nil
+	return reconcile.Result{}, nil
 
 }
 
@@ -291,8 +291,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			Labels: returnLabels(cr),
 		},
 		Spec: corev1.PodSpec{
-			// NOT SECURE!
-			// TODO: MAKE LOW ACCESS LEVEL SA
+			// TODO: NOT SECURE! MAKE UNPRIVILEGED SA!
 			ServiceAccountName: "rabbitmq-operator",
 			InitContainers: []corev1.Container{
 				{

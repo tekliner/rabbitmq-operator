@@ -173,6 +173,8 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 
 	}
 
+	// TODO: Create users control
+
 	// // try to fetch exiting credentials secret
 	// exitingCredSecret := &corev1.Secret{}
 	// err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.Credentials, Namespace: cr.Namespace}, exitingCredSecret)
