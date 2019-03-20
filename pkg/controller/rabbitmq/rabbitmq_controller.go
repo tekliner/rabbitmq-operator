@@ -254,7 +254,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "K8S_HOSTNAME_SUFFIX",
-			Value: "." + cr.Name + "-discovery." + cr.Namespace + "."+cr.Spec.RabbitmqK8SServiceDiscovery,
+			Value: "." + cr.Name + "-discovery." + cr.Namespace + "."+ cr.Spec.RabbitmqK8SServiceDiscovery,
 		},
 		corev1.EnvVar{
 			Name:  "K8S_SERVICE_NAME",
@@ -270,7 +270,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "RABBITMQ_NODENAME",
-			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + "."+cr.Spec.RabbitmqK8SServiceDiscovery,
+			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + "."+ cr.Spec.RabbitmqK8SServiceDiscovery,
 		},
 	)
 }
