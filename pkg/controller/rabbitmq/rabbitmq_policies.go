@@ -14,12 +14,10 @@ import (
 func cleanPolicies(apiService string, reqLogger logr.Logger, secret basicAuthCredentials) {
 	reqLogger.Info("Removing all policies")
 	url := apiService + "/api/policies"
-	response := getRequest(url, secret)
-	// request will return something like that:
-	// [{"vhost":"dts","name":"ha-three","pattern":".*","apply-to":"all","definition":
-	//{"ha-mode":"exactly","ha-params":3,"ha-sync-mode":"automatic"},"priority":0}]
 
+	response := getRequest(url, secret)
 	reqLogger.Info("Removing all policies list", "response", string(response))
+
 	var policies []rabbitmqv1.RabbitmqPolicy
 	err := json.Unmarshal(response, &policies)
 	if err != nil {

@@ -81,7 +81,18 @@ type RabbitmqSpec struct {
 	// TODO: auth mechanisms
 	RabbitmqAuth RabbitmqAuth `json:"auth,omitempty"`
 
+	// set rabbitmq policies
+	RabbitmqPolicies []RabbitmqPolicy `json:"policies"`
+
+	// load additional plugins
+	RabbitmqPlugins []string `json:"plugins"`
+
 	// k8s specific
+
+	// serviceaccount
+	RabbitmqK8SServiceAccount string `json:"k8s_serviceaccount"`
+
+	RabbitmqK8SServiceDiscovery string `json:"k8s_service_discovery"`
 
 	// set your own ENV variables in k8s style
 	K8SENV []corev1.EnvVar `json:"env,omitempty"`
@@ -103,12 +114,6 @@ type RabbitmqSpec struct {
 	RabbitmqK8SPeerDiscoveryBackend     string              `json:"k8s_peer_discovery_backend"`
 	RabbitmqClusterFormationNodeCleanup int64               `json:"cluster_node_cleanup_interval"`
 	RabbitmqClusterPartitionHandling    string              `json:"cluster_partition_handling"`
-
-	// set rabbitmq policies
-	RabbitmqPolicies []RabbitmqPolicy `json:"policies"`
-
-	// load additional plugins
-	RabbitmqPlugins []string `json:"plugins"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq

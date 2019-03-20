@@ -178,6 +178,16 @@ func (in *RabbitmqSpec) DeepCopyInto(out *RabbitmqSpec) {
 	*out = *in
 	out.RabbitmqSSL = in.RabbitmqSSL
 	in.RabbitmqAuth.DeepCopyInto(&out.RabbitmqAuth)
+	if in.RabbitmqPolicies != nil {
+		in, out := &in.RabbitmqPolicies, &out.RabbitmqPolicies
+		*out = make([]RabbitmqPolicy, len(*in))
+		copy(*out, *in)
+	}
+	if in.RabbitmqPlugins != nil {
+		in, out := &in.RabbitmqPlugins, &out.RabbitmqPlugins
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.K8SENV != nil {
 		in, out := &in.K8SENV, &out.K8SENV
 		*out = make([]corev1.EnvVar, len(*in))
@@ -207,16 +217,6 @@ func (in *RabbitmqSpec) DeepCopyInto(out *RabbitmqSpec) {
 		for key, val := range *in {
 			(*out)[key] = val.DeepCopy()
 		}
-	}
-	if in.RabbitmqPolicies != nil {
-		in, out := &in.RabbitmqPolicies, &out.RabbitmqPolicies
-		*out = make([]RabbitmqPolicy, len(*in))
-		copy(*out, *in)
-	}
-	if in.RabbitmqPlugins != nil {
-		in, out := &in.RabbitmqPlugins, &out.RabbitmqPlugins
-		*out = make([]string, len(*in))
-		copy(*out, *in)
 	}
 	return
 }

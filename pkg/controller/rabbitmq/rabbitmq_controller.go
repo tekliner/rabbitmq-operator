@@ -72,16 +72,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
-			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{
-					Name:      a.Meta.GetName() + "-1",
-					Namespace: a.Meta.GetNamespace(),
-				}},
-				{NamespacedName: types.NamespacedName{
-					Name:      a.Meta.GetName() + "-2",
-					Namespace: a.Meta.GetNamespace(),
-				}},
-			}
+			return []reconcile.Request{}
 		})
 
 	p := predicate.Funcs{
@@ -263,7 +254,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "K8S_HOSTNAME_SUFFIX",
-			Value: "." + cr.Name + "-discovery." + cr.Namespace + ".svc.cluster.imp",
+			Value: "." + cr.Name + "-discovery." + cr.Namespace + "."+cr.Spec.RabbitmqK8SServiceDiscovery,
 		},
 		corev1.EnvVar{
 			Name:  "K8S_SERVICE_NAME",
@@ -279,7 +270,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "RABBITMQ_NODENAME",
-			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + ".svc.cluster.imp",
+			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + "."+cr.Spec.RabbitmqK8SServiceDiscovery,
 		},
 	)
 }
@@ -291,8 +282,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 			Labels: returnLabels(cr),
 		},
 		Spec: corev1.PodSpec{
-			// TODO: NOT SECURE! MAKE UNPRIVILEGED SA!
-			ServiceAccountName: "rabbitmq-operator",
+			ServiceAccountName: cr.Spec.RabbitmqK8SServiceAccount,
 			InitContainers: []corev1.Container{
 				{
 					Name:    "copy-rabbitmq-config",
