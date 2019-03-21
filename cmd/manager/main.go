@@ -7,14 +7,13 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/tekliner/rabbitmq-operator/pkg/apis"
-	"github.com/tekliner/rabbitmq-operator/pkg/controller"
-
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	"github.com/tekliner/rabbitmq-operator/pkg/apis"
+	"github.com/tekliner/rabbitmq-operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -82,22 +81,13 @@ func main() {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{})
+	mgr, err := manager.New(cfg, manager.Options{
+		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+	})
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
-
-	// do not watch namespace
-	// // Create a new Cmd to provide shared dependencies and start components
-	// mgr, err := manager.New(cfg, manager.Options{
-	// 	Namespace:          namespace,
-	// 	MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
-	// })
-	// if err != nil {
-	// 	log.Error(err, "")
-	// 	os.Exit(1)
-	// }
 
 	log.Info("Registering Components.")
 
