@@ -60,7 +60,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 
 	// wait http connection to api port
 	timeout := time.Duration(5 * time.Second)
-	apiHostname := cr.Name + "-api:15672"
+	apiHostname := cr.Name + "-api." + cr.Namespace + ":15672"
 	apiService := "http://" + apiHostname
 
 	_, err = net.DialTimeout("tcp", apiHostname, timeout)
@@ -102,7 +102,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 		// send policy to api service
 		reqLogger.Info("Adding policy " + policy.Name + ", URL: " + url + ", JSON: " + string(policyJSON))
 		err = putRequest(url, string(policyJSON), secret)
-		if err!=nil {
+		if err != nil {
 			reqLogger.Info("Error adding policy " + policy.Name + ", URL: " + url + ", JSON: " + string(policyJSON))
 			return err
 		}
