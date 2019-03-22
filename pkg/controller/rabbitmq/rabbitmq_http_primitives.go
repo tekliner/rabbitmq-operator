@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-type basicAuthCredentials struct {
-	username string
-	password string
-}
-
 func getRequest(url string, secret basicAuthCredentials) ([]byte, error) {
 	reqLogger := log.WithValues("getRequest", url)
 	client := &http.Client{}
@@ -34,8 +29,9 @@ func getRequest(url string, secret basicAuthCredentials) ([]byte, error) {
 	return body, nil
 }
 
-func putRequest(url string, data string, secret basicAuthCredentials) error {
+func putRequest(url string, secret basicAuthCredentials, data string) error {
 	reqLogger := log.WithValues("putRequest", url)
+	reqLogger.Info("putRequest", "URL", url, "Data", data)
 	client := &http.Client{}
 	request, _ := http.NewRequest("PUT", url, strings.NewReader(data))
 	request.SetBasicAuth(secret.username, secret.password)
@@ -46,18 +42,17 @@ func putRequest(url string, data string, secret basicAuthCredentials) error {
 	}
 
 	defer resp.Body.Close()
-	reqLogger.Info("Reading responce code", "Code", resp.StatusCode)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		reqLogger.Info("Failed reading body of responce", "Code", string(body))
 		return err
 	}
-	reqLogger.Info("Reading body of responce", "Code", string(body))
+	reqLogger.Info("Reading body of responce", "Body", string(body), "Code", resp.StatusCode)
 	return nil
 }
 
-func deleteRequest(url string, secret basicAuthCredentials) error {
+func deleteRequest(url string, secret basicAuthCredentials, data string) error {
 	reqLogger := log.WithValues("deleteRequest", url)
 	client := &http.Client{}
 	request, _ := http.NewRequest("DELETE", url, nil)

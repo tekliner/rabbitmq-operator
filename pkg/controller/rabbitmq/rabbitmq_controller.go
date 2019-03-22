@@ -65,20 +65,20 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to secondary resource StatefulSets and requeue the owner Dsas
+	// Watch for changes to secondary resource StatefulSets and requeue the owner
 	err = c.Watch(&source.Kind{Type: &v1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		OwnerType: &rabbitmqv1.Rabbitmq{},
 	})
 
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
-			return []reconcile.Request{}
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: a.Meta.GetName()}},
+			}
 		})
 
 	p := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// The object doesn"t contain label "foo", so the event will be
-			// ignored.
 			if _, ok := e.MetaOld.GetLabels()["rabbitmq.improvado.io/name"]; !ok {
 				return false
 			}
@@ -96,9 +96,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&source.Kind{Type: &corev1.Secret{}},
 		&handler.EnqueueRequestsFromMapFunc{
 			ToRequests: mapFn,
-		},
-		// Comment it if default predicate fun is used.
-		p)
+		}, p)
+
 	if err != nil {
 		return err
 	}
@@ -111,11 +110,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 }
 
 var _ reconcile.Reconciler = &ReconcileRabbitmq{}
-
-type secretResouces struct {
-	ServiceAccount string
-	Credentials    string
-}
 
 // ReconcileRabbitmq reconciles a Rabbitmq object
 type ReconcileRabbitmq struct {
@@ -210,7 +204,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// check administrator username and password
+	// secrets used for API requests and user control
 	reqLogger.Info("Reconciling secrets")
 	secretNames, err := r.reconcileSecrets(reqLogger, instance)
 	if err != nil {
@@ -227,18 +221,35 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	// set policies
 	reqLogger.Info("Setting up policies")
-	timeout, _ := time.ParseDuration("30")
-	timeoutFlag := false
-	ctx, ctxCancelTimeout := context.WithTimeout(context.Background(), timeout)
-	defer ctxCancelTimeout()
-	go r.setPolicies(ctx, reqLogger, instance, secretNames)
+	timeoutPolicies, _ := time.ParseDuration("30")
+	timeoutFlagPolicies := false
+	ctxPolicies, ctxPoliciesCancelTimeout := context.WithTimeout(context.Background(), timeoutPolicies)
+	defer ctxPoliciesCancelTimeout()
+	go r.setPolicies(ctxPolicies, reqLogger, instance, secretNames)
 	for {
-		if timeoutFlag {
+		if timeoutFlagPolicies {
 			break
 		}
 		select {
-		case <-ctx.Done():
-			timeoutFlag = true
+		case <-ctxPolicies.Done():
+			timeoutFlagPolicies = true
+		}
+	}
+
+	// set additional users
+	reqLogger.Info("Setting up additional users")
+	timeoutUsers, _ := time.ParseDuration("30")
+	timeoutFlagUsers := false
+	ctxUsers, ctxUsersCancelTimeout := context.WithTimeout(context.Background(), timeoutUsers)
+	defer ctxUsersCancelTimeout()
+	go r.syncUsersCredentials(ctxUsers, reqLogger, instance, secretNames)
+	for {
+		if timeoutFlagUsers {
+			break
+		}
+		select {
+		case <-ctxUsers.Done():
+			timeoutFlagUsers = true
 		}
 	}
 
@@ -254,7 +265,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "K8S_HOSTNAME_SUFFIX",
-			Value: "." + cr.Name + "-discovery." + cr.Namespace + "."+ cr.Spec.RabbitmqK8SServiceDiscovery,
+			Value: "." + cr.Name + "-discovery." + cr.Namespace + "." + cr.Spec.RabbitmqK8SServiceDiscovery,
 		},
 		corev1.EnvVar{
 			Name:  "K8S_SERVICE_NAME",
@@ -270,7 +281,7 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 		},
 		corev1.EnvVar{
 			Name:  "RABBITMQ_NODENAME",
-			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + "."+ cr.Spec.RabbitmqK8SServiceDiscovery,
+			Value: "rabbit@$(MY_POD_NAME)." + cr.Name + "-discovery." + cr.Namespace + "." + cr.Spec.RabbitmqK8SServiceDiscovery,
 		},
 	)
 }

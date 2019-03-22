@@ -119,10 +119,10 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 	// check existance of linked or standart credentials secret
 	// if resource found remove make lists to add, change or remove users
 	createCredentialsSecret := false
+	secretCredResource := &corev1.Secret{}
 	if cr.Spec.RabbitmqSecretCredentials != "" {
-		secretCredResource := &corev1.Secret{}
+		// try to find secret under name from CRD
 		err := r.client.Get(context.TODO(), types.NamespacedName{Name: cr.Spec.RabbitmqSecretCredentials, Namespace: cr.Namespace}, secretCredResource)
-
 		if err != nil && apierrors.IsNotFound(err) {
 			// not found! create new service account
 			reqLogger.Info("User credentials: linked resource not found, operator will create new")
@@ -134,9 +134,8 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		}
 		secretNames.Credentials = cr.Spec.RabbitmqSecretCredentials
 	} else {
-		// link empty, search standart credentials secret
+		// link empty, search standart credentials secret name
 		reqLogger.Info("User credentials: search for standart resource")
-		secretCredResource := &corev1.Secret{}
 		err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.Credentials, Namespace: cr.Namespace}, secretCredResource)
 
 		if err != nil && apierrors.IsNotFound(err) {
@@ -153,7 +152,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 	// create credentials secret
 	if createCredentialsSecret {
 		reqLogger.Info("Creating new user credentials secret", "Namespace", cr.Namespace, "Name", secretNames.Credentials)
-		secretCredResource := &corev1.Secret{
+		secretCredResourceNew := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretNames.Credentials,
 				Namespace: cr.Namespace,
@@ -162,49 +161,16 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 			Data: map[string][]byte{},
 		}
 
-		if err := controllerutil.SetControllerReference(cr, secretCredResource, r.scheme); err != nil {
+		if err := controllerutil.SetControllerReference(cr, secretCredResourceNew, r.scheme); err != nil {
 			return secretNames, err
 		}
 
-		err := r.client.Create(context.TODO(), secretCredResource)
+		err := r.client.Create(context.TODO(), secretCredResourceNew)
 		if err != nil {
 			return secretNames, err
 		}
 
 	}
-
-	// TODO: Create users control
-
-	// // try to fetch exiting credentials secret
-	// exitingCredSecret := &corev1.Secret{}
-	// err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretNames.Credentials, Namespace: cr.Namespace}, exitingCredSecret)
-	// if err != nil {
-	// 	reqLogger.Info("Something went terribly wrong! Credentials secret not found!", "Secret name", secretNames.Credentials, err)
-	// 	return reconcile.Result{}, err
-	// }
-
-	// // lets ensure that crd have same data as secret
-	// if !reflect.DeepEqual(exitingCredSecret.Data, cr.Spec.RabbitmqSecretCredentials) {
-	// 	apiService := "http://" + cr.Name + "-api:15672"
-
-	// 	exitingUsers := found.Data
-	// 	configmapUsers := cr.Spec.RabbitmqSecretCredentials
-
-	// 	// remove all exiting users
-	// 	for user in range exitingUsers {
-	// 		url := apiService + "/api/users/" + user
-
-	// 	}
-
-	// 	// send api request to set new credentials
-
-	// 	// ok, now equalizing data
-	// 	found.Data = rabbitSecret.Data
-	// }
-
-	// if err = r.client.Update(context.TODO(), found); err != nil {
-	// 	return reconcile.Result{}, err
-	// }
 
 	return secretNames, nil
 }
