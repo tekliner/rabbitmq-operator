@@ -143,6 +143,45 @@ func (r *ReconcileRabbitmq) reconcileAmqpService(reqLogger logr.Logger, cr *rabb
 
 	return reconcileResult, err
 }
+
+func (r *ReconcileRabbitmq) reconcileHAService(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name + "-ha",
+			Namespace: cr.Namespace,
+			Labels:    returnLabels(cr),
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeClusterIP,
+			Selector: returnLabels(cr),
+			Ports: []corev1.ServicePort{
+				{
+					TargetPort: intstr.IntOrString{IntVal: 5672},
+					Port:       5672,
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "amqp",
+				},
+				{
+					TargetPort: intstr.IntOrString{IntVal: 4369},
+					Port:       4369,
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "empd",
+				},
+				{
+					TargetPort: intstr.IntOrString{IntVal: 15672},
+					Port:       15672,
+					Protocol:   corev1.ProtocolTCP,
+					Name:       "api",
+				},
+			},
+		},
+	}
+
+	reconcileResult, err := r.reconcileService(reqLogger, cr, service)
+
+	return reconcileResult, err
+}
+
 func (r *ReconcileRabbitmq) reconcileHTTPService(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
 
 	service := &corev1.Service{

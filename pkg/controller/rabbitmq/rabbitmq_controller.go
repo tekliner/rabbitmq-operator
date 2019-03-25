@@ -199,6 +199,12 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
+	// all-in-one service
+	_, err = r.reconcileHAService(reqLogger, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	_, err = r.reconcileDiscoveryService(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
