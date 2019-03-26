@@ -42,9 +42,9 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("rabbitmq-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("rabbitmq-controller", mgr, controller.Options{Reconciler: reconciler})
 	if err != nil {
 		return err
 	}
@@ -72,9 +72,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
-			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: a.Meta.GetName()}},
+			reqLogger := log.WithValues("Secret changed, reconciling", "Namespace", a.Meta.GetNamespace(), "Name", a.Meta.GetName())
+			reqLogger.Info("Reconciling secrets")
+			secretNames, err := r.reconcileSecrets(reqLogger, &rabbitmqv1.Rabbitmq{})
+			if err != nil {
+				return reconcile.Result{}
 			}
+			return reconcile.Result{}
+			// return []reconcile.Request{
+			// 	{NamespacedName: types.NamespacedName{Name: a.Meta.GetName()}},
+			// }
 		})
 
 	p := predicate.Funcs{
@@ -184,17 +191,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	// creating services
 	reqLogger.Info("Reconciling services")
 
-	_, err = r.reconcileEpmdService(reqLogger, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	_, err = r.reconcileHTTPService(reqLogger, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	_, err = r.reconcileAmqpService(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

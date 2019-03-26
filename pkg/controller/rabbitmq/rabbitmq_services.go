@@ -92,62 +92,10 @@ func (r *ReconcileRabbitmq) reconcileDiscoveryService(reqLogger logr.Logger, cr 
 	return reconcileResult, err
 }
 
-func (r *ReconcileRabbitmq) reconcileEpmdService(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-empd",
-			Namespace: cr.Namespace,
-			Labels:    returnLabels(cr),
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: returnLabels(cr),
-			Ports: []corev1.ServicePort{
-				{
-					TargetPort: intstr.IntOrString{IntVal: 4369},
-					Port:       4369,
-					Protocol:   corev1.ProtocolTCP,
-					Name:       "empd",
-				},
-			},
-		},
-	}
-	reconcileResult, err := r.reconcileService(reqLogger, cr, service)
-
-	return reconcileResult, err
-}
-
-func (r *ReconcileRabbitmq) reconcileAmqpService(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-amqp",
-			Namespace: cr.Namespace,
-			Labels:    returnLabels(cr),
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: returnLabels(cr),
-			Ports: []corev1.ServicePort{
-				{
-					TargetPort: intstr.IntOrString{IntVal: 5672},
-					Port:       5672,
-					Protocol:   corev1.ProtocolTCP,
-					Name:       "amqp",
-				},
-			},
-		},
-	}
-
-	reconcileResult, err := r.reconcileService(reqLogger, cr, service)
-
-	return reconcileResult, err
-}
-
 func (r *ReconcileRabbitmq) reconcileHAService(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-ha",
+			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels:    returnLabels(cr),
 		},
