@@ -73,7 +73,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
 			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: a.Meta.GetName(), Namespace: a.Meta.GetNamespace()}},
+				{NamespacedName: types.NamespacedName{Name: a.Meta.GetLabels()["rabbitmq.improvado.io/name"], Namespace: a.Meta.GetNamespace()}},
 			}
 		})
 
