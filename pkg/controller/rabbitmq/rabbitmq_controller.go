@@ -72,16 +72,9 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
-			reqLogger := log.WithValues("Secret changed, reconciling", "Namespace", a.Meta.GetNamespace(), "Name", a.Meta.GetName())
-			reqLogger.Info("Reconciling secrets")
-			secretNames, err := r.reconcileSecrets(reqLogger, &rabbitmqv1.Rabbitmq{})
-			if err != nil {
-				return reconcile.Result{}
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: a.Meta.GetLabels()["rabbitmq.improvado.io/name"], Namespace: a.Meta.GetNamespace()}},
 			}
-			return reconcile.Result{}
-			// return []reconcile.Request{
-			// 	{NamespacedName: types.NamespacedName{Name: a.Meta.GetName()}},
-			// }
 		})
 
 	p := predicate.Funcs{
