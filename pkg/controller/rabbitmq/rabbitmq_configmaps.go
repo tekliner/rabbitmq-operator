@@ -52,11 +52,10 @@ rabbitmq_shovel_management
 `
 
 const initRabbitmqScript = `# RabbitMQ Init script
-rm -rf /var/lib/rabbitmq/*
-rm -rf /etc/rabbitmq/*
-cp /rabbit-config/* /etc/rabbitmq/
-cp /rabbit-config/.* /etc/rabbitmq/
-chmod 600 /etc/rabbitmq/.erlang.cookie 
+rm -f /var/lib/rabbitmq/.erlang.cookie
+cp /rabbit-config/* /etc/rabbitmq
+cp /rabbit-config/.* /etc/rabbitmq
+chmod 600 /etc/rabbitmq/.erlang.cookie  
 `
 
 func applyDataOnTemplate(reqLogger logr.Logger, templateContent string, cr templateDataStruct) (string, error) {

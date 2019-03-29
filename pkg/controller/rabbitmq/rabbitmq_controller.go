@@ -315,7 +315,10 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 				{
 					Name:  "rabbitmq",
 					Image: cr.Spec.K8SImage.Name + ":" + cr.Spec.K8SImage.Tag,
-					Env:   appendNodeVariables(cr.Spec.K8SENV, cr),
+					Env:   append(appendNodeVariables(cr.Spec.K8SENV, cr), corev1.EnvVar{
+							Name: "RABBITMQ_ERLANG_COOKIE",
+							ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name}, Key: ".erlang.cookie"}},
+					}),
 					Resources: corev1.ResourceRequirements{
 						Requests: cr.Spec.RabbitmqPodRequests,
 						Limits:   cr.Spec.RabbitmqPodLimits,
