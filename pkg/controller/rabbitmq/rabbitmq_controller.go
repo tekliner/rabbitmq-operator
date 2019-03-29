@@ -42,9 +42,9 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("rabbitmq-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("rabbitmq-controller", mgr, controller.Options{Reconciler: reconciler})
 	if err != nil {
 		return err
 	}
@@ -184,17 +184,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	// creating services
 	reqLogger.Info("Reconciling services")
 
-	_, err = r.reconcileEpmdService(reqLogger, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	_, err = r.reconcileHTTPService(reqLogger, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	_, err = r.reconcileAmqpService(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

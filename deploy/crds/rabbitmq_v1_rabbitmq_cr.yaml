@@ -20,6 +20,11 @@ spec:
   k8s_service_discovery: "svc.cluster.imp"
   k8s_addrtype: hostname
   cluster_node_cleanup_interval: 10
+  auth:
+    enabled: true
+    mechanisms:
+      - PLAIN
+      - AMQPLAIN
   volume_size: 1Gi
 #  policies:
 #    - name: ha-three
