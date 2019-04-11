@@ -12,17 +12,19 @@ import (
 // Like policies, we need to remove all users and add them from secret
 
 func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) error {
-	var secret basicAuthCredentials
+
+	// get service account credentials
+	var serviceAccount basicAuthCredentials
 
 	username, err := r.getSecretData(reqLogger, cr.Namespace, secretNames.ServiceAccount, "username")
-	secret.username = username
+	serviceAccount.username = username
 	if err != nil {
 		reqLogger.Info("Users: auth username not found")
 		return err
 	}
 
 	password, err := r.getSecretData(reqLogger, cr.Namespace, secretNames.ServiceAccount, "password")
-	secret.password = password
+	serviceAccount.password = password
 	if err != nil {
 		reqLogger.Info("Users: auth password not found")
 		return err
@@ -36,15 +38,15 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 		reqLogger.Info("Rabbitmq API service failed", "Service name", r.apiServiceHostname(cr), "Error", err.Error())
 		return err
 	}
-	reqLogger.Info("Using API service: "+r.apiServiceAddress(cr), "username", secret.username, "password", secret.password)
+	reqLogger.Info("Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
 
 	// get user from secret
 	usersSecret, err := r.getSecret(secretNames.Credentials, cr.Namespace)
-	reqLogger.Info("Users from secret", "CRD", cr.Name , "SecretNames", secretNames, "Secret data", usersSecret.Data)
+	reqLogger.Info("Users from secret", "CRD", cr.Name , "SecretNames", secretNames, "Users", usersSecret.Data, "ServiceAccount", serviceAccount)
 
 	// get users from rabbit api
 	reqLogger.Info("Reading all users from rabbitmq")
-	usersRabbit, err := r.apiUserList(reqLogger, cr, secret)
+	usersRabbit, err := r.apiUserList(reqLogger, cr, serviceAccount)
 	if err != nil {
 		reqLogger.Info("Error while receiving users list", "Error", err.Error())
 		return err
@@ -91,7 +93,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 
 	reqLogger.Info("Removing users", "Users", usersToRemove)
 	for _, user := range usersToRemove {
-		if user == secret.username {
+		if user == serviceAccount.username {
 			// do not remove service account, seriosly
 			continue
 		}
@@ -110,7 +112,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 		userName := user
 		reqLogger.Info("Adding user " + userName + " Password " + string(userPassword))
 
-		err = r.apiUserAdd(reqLogger, cr, secret, rabbitmqUserStruct{Name: userName, Password: string(userPassword), Tags: "management"})
+		err = r.apiUserAdd(reqLogger, cr, serviceAccount, rabbitmqUserStruct{Name: userName, Password: string(userPassword), Tags: "management"})
 		if err != nil {
 			reqLogger.Info("Error adding user "+userName, "Error", err)
 			return err
