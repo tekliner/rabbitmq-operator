@@ -37,7 +37,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 		reqLogger.Info("Rabbitmq API service failed", "Service name", r.apiServiceHostname(cr), "Error", err.Error())
 		return err
 	}
-	reqLogger.Info("Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
+	reqLogger.Info("Policies: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
 
 	var policiesCR []rabbitmqv1.RabbitmqPolicy
 
@@ -77,28 +77,6 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 
 	// ok, now syncing
 
-	// add to rabbit from CR
-	for _, policyCR := range policiesCR {
-
-		//search
-		policyFound := false
-		for _, policyRabbit := range policiesRabbit {
-			if policyCR.Name == policyRabbit.Name {
-				policyFound =true
-			}
-		}
-
-		if !policyFound {
-			// send policy to api service
-			reqLogger.Info("Adding policy " + policyCR.Name + " to vhost " + policyCR.Vhost)
-			err = r.apiPolicyAdd(reqLogger, cr, serviceAccount, policyCR.Vhost, policyCR)
-			if err != nil {
-				reqLogger.Info("Error adding policy "+policyCR.Name+" to vhost "+policyCR.Vhost, "Error", err)
-				return err
-			}
-		}
-	}
-
 	// remove policies from rabbit
 	for _, policyRabbit := range policiesRabbit {
 
@@ -118,6 +96,16 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 			}
 		}
 
+	}
+
+	// add to rabbit from CR
+	for _, policyCR := range policiesCR {
+		reqLogger.Info("Adding policy " + policyCR.Name + " to vhost " + policyCR.Vhost)
+		err = r.apiPolicyAdd(reqLogger, cr, serviceAccount, policyCR.Vhost, policyCR)
+		if err != nil {
+			reqLogger.Info("Error adding policy "+policyCR.Name+" to vhost "+policyCR.Vhost, "Error", err)
+			return err
+		}
 	}
 
 	return nil
