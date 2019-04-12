@@ -11,19 +11,21 @@ import (
 
 // setPolicies run as go routine
 func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) error {
-	var secret basicAuthCredentials
+
+	// get service account credentials
+	var serviceAccount basicAuthCredentials
 
 	username, err := r.getSecretData(reqLogger, cr.Namespace, secretNames.ServiceAccount, "username")
-	secret.username = username
+	serviceAccount.username = username
 	if err != nil {
-		reqLogger.Info("Policies: auth username not found")
+		reqLogger.Info("Users: auth username not found")
 		return err
 	}
 
 	password, err := r.getSecretData(reqLogger, cr.Namespace, secretNames.ServiceAccount, "password")
-	secret.password = password
+	serviceAccount.password = password
 	if err != nil {
-		reqLogger.Info("Policies: auth password not found")
+		reqLogger.Info("Users: auth password not found")
 		return err
 	}
 
@@ -35,34 +37,29 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 		reqLogger.Info("Rabbitmq API service failed", "Service name", r.apiServiceHostname(cr), "Error", err.Error())
 		return err
 	}
-	reqLogger.Info("Using API service: "+r.apiServiceAddress(cr), "username", secret.username, "password", secret.password)
+	reqLogger.Info("Policies: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
 
-	//clean rabbit before fulfilling policies list
-	reqLogger.Info("Removing all policies")
+	var policiesCR []rabbitmqv1.RabbitmqPolicy
 
-	policies, err := r.apiPolicyList(reqLogger, cr, secret)
+	// get exiting policies
+	reqLogger.Info("Reading exiting policies")
+
+	policiesRabbit, err := r.apiPolicyList(reqLogger, cr, serviceAccount)
 	if err != nil {
 		reqLogger.Info("Error while receiving policies list", "Error", err.Error())
 		return err
 	}
-	reqLogger.Info("Removing all policies from list", "Policies", policies)
-	for _, policyRecord := range policies {
-		reqLogger.Info("Removing " + policyRecord.Name)
-		err = r.apiPolicyRemove(reqLogger, cr, secret, policyRecord.Vhost, policyRecord.Name)
-		if err != nil {
-			return err
-		}
-	}
 
-	reqLogger.Info("Uploading policies from CRD")
+	// get policies from CR
+	reqLogger.Info("Reading policies from CRD")
 
-	// detect default vhost for all policies
+	// set default vhost for all policies
 	policiesDefaultVhost := "%2f"
 	if cr.Spec.RabbitmqVhost != "" {
 		policiesDefaultVhost = cr.Spec.RabbitmqVhost
 	}
 
-	// add new policies to Rabbit
+	// detect vhost to use
 	for _, policy := range cr.Spec.RabbitmqPolicies {
 		// detect vhost to use
 		policyVhost := ""
@@ -72,11 +69,41 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 			policyVhost = policiesDefaultVhost
 		}
 
-		// send policy to api service
-		reqLogger.Info("Adding policy " + policy.Name + " to vhost " + policyVhost)
-		err = r.apiPolicyAdd(reqLogger, cr, secret, policyVhost, policy)
+		policy.Vhost = policyVhost
+
+		policiesCR = append(policiesCR, policy)
+
+	}
+
+	// ok, now syncing
+
+	// remove policies from rabbit
+	for _, policyRabbit := range policiesRabbit {
+
+		// search
+		policyFound := false
+		for _, policyCR := range policiesCR {
+			if policyCR.Name == policyRabbit.Name {
+				policyFound =true
+			}
+		}
+
+		if !policyFound {
+			reqLogger.Info("Removing " + policyRabbit.Name)
+			err = r.apiPolicyRemove(reqLogger, cr, serviceAccount, policyRabbit.Vhost, policyRabbit.Name)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	// add to rabbit from CR
+	for _, policyCR := range policiesCR {
+		reqLogger.Info("Adding policy " + policyCR.Name + " to vhost " + policyCR.Vhost)
+		err = r.apiPolicyAdd(reqLogger, cr, serviceAccount, policyCR.Vhost, policyCR)
 		if err != nil {
-			reqLogger.Info("Error adding policy "+policy.Name+" to vhost "+policyVhost, "Error", err)
+			reqLogger.Info("Error adding policy "+policyCR.Name+" to vhost "+policyCR.Vhost, "Error", err)
 			return err
 		}
 	}
