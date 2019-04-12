@@ -42,7 +42,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 
 	// get user from secret
 	usersSecret, err := r.getSecret(secretNames.Credentials, cr.Namespace)
-	reqLogger.Info("Users from secret", "CRD", cr.Name , "SecretNames", secretNames, "Users", usersSecret.Data, "ServiceAccount", serviceAccount)
+	reqLogger.Info("Users from secret", "CRD", cr.Name , "SecretNames", secretNames, "Users", usersSecret, "ServiceAccount", serviceAccount.username)
 
 	// get users from rabbit api
 	reqLogger.Info("Reading all users from rabbitmq")
@@ -84,7 +84,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 		}
 
 		// user from RabbitMQ not found in secret resource, so add to remove list
-		if !userFound {
+		if (!userFound) && (userRabbitName.Name != serviceAccount.username) {
 			usersToRemove = append(usersToRemove, userRabbitName.Name)
 		}
 	}
