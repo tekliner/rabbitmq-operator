@@ -26,13 +26,13 @@ spec:
       - PLAIN
       - AMQPLAIN
   volume_size: 1Gi
-#  policies:
-#    - name: ha-three
-#      vhost: "rabbit"
-#      pattern: ".*"
-#      definition:
-#        ha-mode: "exactly"
-#        ha-params: 3
-#        ha-sync-mode: "automatic"
-#      priority: 0
-#      apply-to: all
+  policies:
+    - name: ha-three
+      vhost: "rabbit"
+      pattern: ".*"
+      definition:
+        ha-mode: "exactly"
+        ha-params: 3
+        ha-sync-mode: "automatic"
+      priority: 0
+      apply-to: all

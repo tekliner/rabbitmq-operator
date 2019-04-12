@@ -97,8 +97,9 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 			// do not remove service account, seriosly
 			continue
 		}
+		
 		reqLogger.Info("Removing " + user)
-		err = r.apiUserRemove(reqLogger, cr, secret, rabbitmqUserStruct{Name:user})
+		err = r.apiUserRemove(reqLogger, cr, serviceAccount, rabbitmqUserStruct{Name:user})
 		if err != nil {
 			return err
 		}
