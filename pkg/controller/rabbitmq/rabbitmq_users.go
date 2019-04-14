@@ -38,7 +38,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 		reqLogger.Info("Rabbitmq API service failed", "Service name", r.apiServiceHostname(cr), "Error", err.Error())
 		return err
 	}
-	reqLogger.Info("Users: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
+	reqLogger.Info("Users: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username)
 
 	// get user from secret
 	usersSecret, err := r.getSecret(secretNames.Credentials, cr.Namespace)
@@ -79,7 +79,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 
 	// add new users to Rabbit
 	for userName, userPassword := range usersSecret.Data {
-		reqLogger.Info("Adding user " + userName + " Password " + string(userPassword))
+		reqLogger.Info("Adding user " + userName)
 
 		err = r.apiUserAdd(reqLogger, cr, serviceAccount, rabbitmqUserStruct{Name: userName, Password: string(userPassword), Tags: "management"})
 		if err != nil {
