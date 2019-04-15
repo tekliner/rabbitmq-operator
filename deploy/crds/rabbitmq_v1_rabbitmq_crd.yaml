@@ -1,7 +1,6 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  creationTimestamp: null
   name: rabbitmqs.rabbitmq.improvado.io
 spec:
   group: rabbitmq.improvado.io
@@ -17,12 +16,106 @@ spec:
     openAPIV3Schema:
       properties:
         apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
           type: string
         kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
         spec:
+          properties:
+            auth:
+              description: 'TODO: auth mechanisms'
+              properties:
+                enabled:
+                  type: boolean
+                mechanisms:
+                  items:
+                    type: string
+                  type: array
+                  uniqueItems: true
+              required:
+              - enabled
+              type: object
+            cert:
+              description: 'set SSL settings TODO: add to template, issue certs with
+                Vault'
+              properties:
+                cacertfile:
+                  type: string
+                certfile:
+                  type: string
+                enabled:
+                  type: boolean
+                exitingSecret:
+                  type: string
+                keyfile:
+                  type: string
+              required:
+              - enabled
+              type: object
+            env:
+              description: set your own ENV variables in k8s style
+              items:
+                type: object
+              type: array
+            image:
+              description: you can set your own image instead of official
+              properties:
+                name:
+                  type: string
+                tag:
+                  type: string
+              required:
+              - name
+              - tag
+              type: object
+            plugins:
+              description: load additional plugins
+              items:
+                type: string
+              type: array
+            policies:
+              description: set rabbitmq policies
+              items:
+                properties:
+                  definition:
+                    properties:
+                      expires:
+                        format: int64
+                        type: integer
+                    type: object
+                  name:
+                    type: string
+                  pattern:
+                    type: string
+                  priority:
+                    format: int64
+                    type: integer
+                  vhost:
+                    type: string
+                required:
+                - name
+                - pattern
+                - definition
+                - priority
+                type: object
+              type: array
+            replicas:
+              format: int32
+              maximum: 10
+              minimum: 1
+              type: integer
+          required:
+          - replicas
+          - policies
+          - plugins
+          - image
           type: object
         status:
           type: object
