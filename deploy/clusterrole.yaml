@@ -44,6 +44,8 @@ rules:
   verbs:
   - get
   - create
+  - list
+  - watch
 - apiGroups:
   - rabbitmq.improvado.io
   resources:

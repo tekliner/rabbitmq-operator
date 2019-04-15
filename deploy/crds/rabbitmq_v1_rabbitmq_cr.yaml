@@ -10,6 +10,11 @@ spec:
     tag: 3-alpine
   #secret_credentials: rabbit-users
   #secret_service_account: rabbit-service
+
+  # comment or set 0 if no exporter needed
+  prometheus_exporter_port: 9091
+  #prometheus_image: "kbudde/rabbitmq-exporter:v0.28.0"
+
   memory_high_watermark: 256M
 
   # create unprivileged serviceaccount by hands

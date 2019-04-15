@@ -114,6 +114,8 @@ type RabbitmqSpec struct {
 	RabbitmqK8SPeerDiscoveryBackend     string              `json:"k8s_peer_discovery_backend"`
 	RabbitmqClusterFormationNodeCleanup int64               `json:"cluster_node_cleanup_interval"`
 	RabbitmqClusterPartitionHandling    string              `json:"cluster_partition_handling"`
+	RabbitmqPrometheusExporterPort 		int32 				`json:"prometheus_exporter_port,omitempty"`
+	RabbitmqPrometheusImage				string				`json:"prometheus_image,omitempty"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq

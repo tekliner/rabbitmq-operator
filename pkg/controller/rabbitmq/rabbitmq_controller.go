@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
@@ -127,6 +128,16 @@ type ReconcileRabbitmq struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 
+func mergeMaps(itermaps ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, rv := range itermaps {
+		for k, v := range rv {
+			result[k] = v
+		}
+	}
+	return result
+}
+
 func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
 		"rabbitmq.improvado.io/app":       "rabbitmq",
@@ -134,6 +145,21 @@ func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 		"rabbitmq.improvado.io/component": "messaging",
 	}
 	return labels
+}
+
+func returnAnnotationsPrometheus(cr *rabbitmqv1.Rabbitmq) map[string]string {
+	return map[string]string{
+		"prometheus.io/scrape": "true",
+		"prometheus.io/port": strconv.Itoa(int(cr.Spec.RabbitmqPrometheusExporterPort)),
+	}
+}
+
+func returnAnnotations(cr *rabbitmqv1.Rabbitmq) map[string]string {
+	annotations := map[string]string{}
+	if cr.Spec.RabbitmqPrometheusExporterPort > 0 {
+		annotations = mergeMaps(annotations, returnAnnotationsPrometheus(cr))
+	}
+	return annotations
 }
 
 // Reconcile method
@@ -155,7 +181,14 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	statefulset := newStatefulSet(instance)
+	// secrets used for API requests and user control
+	reqLogger.Info("Reconciling secrets")
+	secretNames, err := r.reconcileSecrets(reqLogger, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	statefulset := newStatefulSet(instance, secretNames)
 	if err := controllerutil.SetControllerReference(instance, statefulset, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -200,19 +233,24 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	// secrets used for API requests and user control
-	reqLogger.Info("Reconciling secrets")
-	secretNames, err := r.reconcileSecrets(reqLogger, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// configmap
 	reqLogger.Info("Reconciling configmap")
 
 	_, err = r.reconcileConfigMap(reqLogger, instance, secretNames)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// check prometheus exporter flag
+	if instance.Spec.RabbitmqPrometheusExporterPort > 0 {
+		_, err = r.reconcilePrometheusExporterService(reqLogger, instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		_, err = r.reconcilePrometheusExporterServiceMonitor(reqLogger, instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// set policies
@@ -282,11 +320,78 @@ func appendNodeVariables(env []corev1.EnvVar, cr *rabbitmqv1.Rabbitmq) []corev1.
 	)
 }
 
-func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
+func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.StatefulSet {
+
+	// prepare containers for pod
+	podContainers := []corev1.Container{}
+
+	// container with rabbitmq
+	rabbitmqContainer := corev1.Container{
+		Name:  "rabbitmq",
+		Image: cr.Spec.K8SImage.Name + ":" + cr.Spec.K8SImage.Tag,
+		Env: append(appendNodeVariables(cr.Spec.K8SENV, cr), corev1.EnvVar{
+			Name:      "RABBITMQ_ERLANG_COOKIE",
+			ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name}, Key: ".erlang.cookie"}},
+		}),
+		Resources: corev1.ResourceRequirements{
+			Requests: cr.Spec.RabbitmqPodRequests,
+			Limits:   cr.Spec.RabbitmqPodLimits,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "rabbit-etc",
+				MountPath: "/etc/rabbitmq",
+			},
+			{
+				Name:      "rabbit-data",
+				MountPath: "/var/lib/rabbitmq",
+			},
+			{
+				Name:      "rabbit-config",
+				MountPath: "/rabbit-config",
+			},
+		},
+	}
+
+	podContainers = append(podContainers, rabbitmqContainer)
+
+	// if prometheus exporter enabled add additional container to pod
+	if cr.Spec.RabbitmqPrometheusExporterPort > 0 {
+
+		exporterImageAndTag := "kbudde/rabbitmq-exporter:latest"
+		if cr.Spec.RabbitmqPrometheusImage != "" {
+			exporterImageAndTag = cr.Spec.RabbitmqPrometheusImage
+		}
+
+		exporterContainer := corev1.Container{
+			Name:  "prometheus-exporter",
+			Image: exporterImageAndTag,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Env: []corev1.EnvVar{
+				{
+					Name:      "RABBIT_USER",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: secretNames.ServiceAccount}, Key: "username"}},
+				},
+				{
+					Name:      "RABBIT_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: secretNames.ServiceAccount}, Key: "password"}},
+				},
+			},
+			Ports: []corev1.ContainerPort{
+				{
+					Name: "exporter",
+					Protocol: corev1.ProtocolTCP,
+					ContainerPort: cr.Spec.RabbitmqPrometheusExporterPort,
+				},
+			},
+		}
+		podContainers = append(podContainers, exporterContainer)
+	}
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: returnLabels(cr),
+			Annotations: returnAnnotations(cr),
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: cr.Spec.RabbitmqK8SServiceAccount,
@@ -311,34 +416,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq) *v1.StatefulSet {
 					},
 				},
 			},
-			Containers: []corev1.Container{
-				{
-					Name:  "rabbitmq",
-					Image: cr.Spec.K8SImage.Name + ":" + cr.Spec.K8SImage.Tag,
-					Env:   append(appendNodeVariables(cr.Spec.K8SENV, cr), corev1.EnvVar{
-							Name: "RABBITMQ_ERLANG_COOKIE",
-							ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name}, Key: ".erlang.cookie"}},
-					}),
-					Resources: corev1.ResourceRequirements{
-						Requests: cr.Spec.RabbitmqPodRequests,
-						Limits:   cr.Spec.RabbitmqPodLimits,
-					},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "rabbit-etc",
-							MountPath: "/etc/rabbitmq",
-						},
-						{
-							Name:      "rabbit-data",
-							MountPath: "/var/lib/rabbitmq",
-						},
-						{
-							Name:      "rabbit-config",
-							MountPath: "/rabbit-config",
-						},
-					},
-				},
-			},
+			Containers: podContainers,
 			Volumes: []corev1.Volume{
 				{
 					Name: "rabbit-config",
