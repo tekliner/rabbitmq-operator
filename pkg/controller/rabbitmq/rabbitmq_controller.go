@@ -142,7 +142,6 @@ func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
 		"rabbitmq.improvado.io/app":       "rabbitmq",
 		"rabbitmq.improvado.io/name":      cr.Name,
-		"rabbitmq.improvado.io/component": "messaging",
 	}
 	return labels
 }
@@ -390,7 +389,9 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: returnLabels(cr),
+			Labels: mergeMaps(returnLabels(cr),
+				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
+			),
 			Annotations: returnAnnotations(cr),
 		},
 		Spec: corev1.PodSpec{
@@ -456,7 +457,9 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
-			Labels:    returnLabels(cr),
+			Labels: mergeMaps(returnLabels(cr),
+				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
+			),
 		},
 		Spec: v1.StatefulSetSpec{
 			Replicas:    &cr.Spec.RabbitmqReplicas,
