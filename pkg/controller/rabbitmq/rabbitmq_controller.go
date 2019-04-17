@@ -140,8 +140,8 @@ func mergeMaps(itermaps ...map[string]string) map[string]string {
 
 func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
-		"rabbitmq.improvado.io/app":       "rabbitmq",
-		"rabbitmq.improvado.io/name":      cr.Name,
+		"application":       "rabbitmq",
+		"instance":      cr.Name,
 	}
 	return labels
 }
@@ -390,7 +390,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
+				map[string]string{"component": "messaging"},
 			),
 			Annotations: returnAnnotations(cr),
 		},
@@ -458,7 +458,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
+				map[string]string{"component": "messaging"},
 			),
 		},
 		Spec: v1.StatefulSetSpec{
