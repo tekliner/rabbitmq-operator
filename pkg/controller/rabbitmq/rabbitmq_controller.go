@@ -70,6 +70,9 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 	err = c.Watch(&source.Kind{Type: &v1.StatefulSet{}}, &handler.EnqueueRequestForOwner{
 		OwnerType: &rabbitmqv1.Rabbitmq{},
 	})
+	if err != nil {
+		return err
+	}
 
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
@@ -98,10 +101,6 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 		&handler.EnqueueRequestsFromMapFunc{
 			ToRequests: mapFn,
 		}, p)
-
-	if err != nil {
-		return err
-	}
 
 	if err != nil {
 		return err
