@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/getsentry/raven-go"
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +24,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+func init() {
+	raven.SetDSN("https://983d2bf5d8f247e98b89d179b737a48d:f3133ece803044fa8491775da2d56cf5@sentry.tools.improvado.io/37")
+}
 
 var log = logf.Log.WithName("controller_rabbitmq")
 
@@ -47,12 +52,14 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 	// Create a new controller
 	c, err := controller.New("rabbitmq-controller", mgr, controller.Options{Reconciler: reconciler})
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
 	// Watch for changes to primary resource Rabbitmq
 	err = c.Watch(&source.Kind{Type: &rabbitmqv1.Rabbitmq{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -63,6 +70,7 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 		OwnerType:    &rabbitmqv1.Rabbitmq{},
 	})
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -71,6 +79,7 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 		OwnerType: &rabbitmqv1.Rabbitmq{},
 	})
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -103,6 +112,7 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 		}, p)
 
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -139,8 +149,8 @@ func mergeMaps(itermaps ...map[string]string) map[string]string {
 
 func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
-		"application":       "rabbitmq",
-		"instance":      cr.Name,
+		"application": "rabbitmq",
+		"instance":    cr.Name,
 	}
 	return labels
 }
@@ -148,7 +158,7 @@ func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 func returnAnnotationsPrometheus(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	return map[string]string{
 		"prometheus.io/scrape": "true",
-		"prometheus.io/port": strconv.Itoa(int(cr.Spec.RabbitmqPrometheusExporterPort)),
+		"prometheus.io/port":   strconv.Itoa(int(cr.Spec.RabbitmqPrometheusExporterPort)),
 	}
 }
 
@@ -176,6 +186,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
@@ -183,11 +194,13 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	reqLogger.Info("Reconciling secrets")
 	secretNames, err := r.reconcileSecrets(reqLogger, instance)
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
 	statefulset := newStatefulSet(instance, secretNames)
 	if err := controllerutil.SetControllerReference(instance, statefulset, r.scheme); err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
@@ -197,18 +210,21 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		reqLogger.Info("Creating a new statefulset", "statefulset.Namespace", statefulset.Namespace, "statefulset.Name", statefulset.Name)
 		err = r.client.Create(context.TODO(), statefulset)
 		if err != nil {
+			raven.CaptureErrorAndWait(err, nil)
 			return reconcile.Result{}, err
 		}
 
 		// statefulset created successfully - don't requeue
 		return reconcile.Result{}, nil
 	} else if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 	if err = r.client.Update(context.TODO(), statefulset); err != nil {
 		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
@@ -217,17 +233,20 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	_, err = r.reconcileHTTPService(reqLogger, instance)
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
 	// all-in-one service
 	_, err = r.reconcileHAService(reqLogger, instance)
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
 	_, err = r.reconcileDiscoveryService(reqLogger, instance)
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
@@ -236,6 +255,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 
 	_, err = r.reconcileConfigMap(reqLogger, instance, secretNames)
 	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
 
@@ -243,10 +263,12 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	if instance.Spec.RabbitmqPrometheusExporterPort > 0 {
 		_, err = r.reconcilePrometheusExporterService(reqLogger, instance)
 		if err != nil {
+			raven.CaptureErrorAndWait(err, nil)
 			return reconcile.Result{}, err
 		}
 		_, err = r.reconcilePrometheusExporterServiceMonitor(reqLogger, instance)
 		if err != nil {
+			raven.CaptureErrorAndWait(err, nil)
 			return reconcile.Result{}, err
 		}
 	}
@@ -362,8 +384,8 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 		}
 
 		exporterContainer := corev1.Container{
-			Name:  "prometheus-exporter",
-			Image: exporterImageAndTag,
+			Name:            "prometheus-exporter",
+			Image:           exporterImageAndTag,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Env: []corev1.EnvVar{
 				{
@@ -377,8 +399,8 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			},
 			Ports: []corev1.ContainerPort{
 				{
-					Name: "exporter",
-					Protocol: corev1.ProtocolTCP,
+					Name:          "exporter",
+					Protocol:      corev1.ProtocolTCP,
 					ContainerPort: cr.Spec.RabbitmqPrometheusExporterPort,
 				},
 			},

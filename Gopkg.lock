@@ -42,13 +42,21 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
+  digest = "1:65d39e3a7e262416eb6f855d213954282921a3506125ce88e59514ae396dd690"
+  name = "github.com/certifi/gocertifi"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "deb3ae2ef2610fde3330947281941c562861188b"
+  version = "2018.01.18"
+
+[[projects]]
   digest = "1:c61f4f97321a37adcb5b4fd4fd61209cd553e46c99ee606c465553541b12a229"
   name = "github.com/coreos/prometheus-operator"
   packages = [
     "pkg/apis/monitoring",
     "pkg/apis/monitoring/v1",
     "pkg/client/versioned/scheme",
-    "pkg/client/versioned/typed/monitoring/v1"
+    "pkg/client/versioned/typed/monitoring/v1",
   ]
   pruneopts = "NT"
   revision = "72ec4b9b16ef11700724dc71fec77112536eed40"
@@ -67,11 +75,19 @@
   name = "github.com/emicklei/go-restful"
   packages = [
     ".",
-    "log"
+    "log",
   ]
   pruneopts = "NT"
   revision = "85d198d05a92d31823b852b4a5928114912e8949"
   version = "v2.9.0"
+
+[[projects]]
+  digest = "1:bd1b9cbca8127056a93ebacb5ff7c7ceb8f5694b16399daeb242510cce3eae70"
+  name = "github.com/getsentry/raven-go"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "f04e7487e9a6b9d9837d52743fb5f40576c56411"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:81466b4218bf6adddac2572a30ac733a9255919bc2f470b4827a317bd4ee1756"
@@ -142,7 +158,7 @@
   name = "github.com/gogo/protobuf"
   packages = [
     "proto",
-    "sortkeys"
+    "sortkeys",
   ]
   pruneopts = "NT"
   revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
@@ -172,7 +188,7 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp"
+    "ptypes/timestamp",
   ]
   pruneopts = "NT"
   revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
@@ -208,7 +224,7 @@
   packages = [
     "OpenAPIv2",
     "compiler",
-    "extensions"
+    "extensions",
   ]
   pruneopts = "NT"
   revision = "7c663266750e7d82587642f65e60bc4083f1f84e"
@@ -220,7 +236,7 @@
   name = "github.com/gregjones/httpcache"
   packages = [
     ".",
-    "diskcache"
+    "diskcache",
   ]
   pruneopts = "NT"
   revision = "3befbb6ad0cc97d4c25d851e9528915809e1a22f"
@@ -230,7 +246,7 @@
   name = "github.com/hashicorp/golang-lru"
   packages = [
     ".",
-    "simplelru"
+    "simplelru",
   ]
   pruneopts = "NT"
   revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
@@ -275,7 +291,7 @@
   packages = [
     "buffer",
     "jlexer",
-    "jwriter"
+    "jwriter",
   ]
   pruneopts = "NT"
   revision = "6243d8e04c3f819e79757e8bc3faa15c3cb27003"
@@ -321,7 +337,7 @@
     "pkg/leader",
     "pkg/log/zap",
     "pkg/metrics",
-    "version"
+    "version",
   ]
   pruneopts = "NT"
   revision = "a882a84f8520dc8dcabaf03c0f1c7f55460eeafd"
@@ -364,7 +380,7 @@
   packages = [
     "prometheus",
     "prometheus/internal",
-    "prometheus/promhttp"
+    "prometheus/promhttp",
   ]
   pruneopts = "NT"
   revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
@@ -384,7 +400,7 @@
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
-    "model"
+    "model",
   ]
   pruneopts = "NT"
   revision = "cfeb6f9992ffa54aaa4f2170ade4067ee478b250"
@@ -399,7 +415,7 @@
     "internal/util",
     "iostats",
     "nfs",
-    "xfs"
+    "xfs",
   ]
   pruneopts = "NT"
   revision = "e4d4a2206da023361ed100d85c5f2cf9c8364e9f"
@@ -410,7 +426,7 @@
   packages = [
     "modfile",
     "module",
-    "semver"
+    "semver",
   ]
   pruneopts = "NT"
   revision = "1cf9852c553c5b7da2d5a4a091129a7822fed0c9"
@@ -421,7 +437,7 @@
   name = "github.com/spf13/afero"
   packages = [
     ".",
-    "mem"
+    "mem",
   ]
   pruneopts = "NT"
   revision = "f4711e4db9e9a1d3887343acb72b2bbfc2f686f5"
@@ -460,7 +476,7 @@
     "internal/bufferpool",
     "internal/color",
     "internal/exit",
-    "zapcore"
+    "zapcore",
   ]
   pruneopts = "NT"
   revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
@@ -484,7 +500,7 @@
     "http/httpguts",
     "http2",
     "http2/hpack",
-    "idna"
+    "idna",
   ]
   pruneopts = "NT"
   revision = "3a22650c66bd7f4fb6d1e8072ffd7b75c8a27898"
@@ -498,7 +514,7 @@
     "google",
     "internal",
     "jws",
-    "jwt"
+    "jwt",
   ]
   pruneopts = "NT"
   revision = "9b3c75971fc92dd27c6436a37c05c831498658f1"
@@ -509,7 +525,7 @@
   name = "golang.org/x/sys"
   packages = [
     "unix",
-    "windows"
+    "windows",
   ]
   pruneopts = "NT"
   revision = "a9d3bda3a223baa6bba6ef412cb273f0fd163c05"
@@ -532,7 +548,7 @@
     "unicode/cldr",
     "unicode/norm",
     "unicode/rangetable",
-    "width"
+    "width",
   ]
   pruneopts = "NT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
@@ -562,7 +578,7 @@
     "internal/fastwalk",
     "internal/gopathwalk",
     "internal/module",
-    "internal/semver"
+    "internal/semver",
   ]
   pruneopts = "NT"
   revision = "83362c3779f5f48611068d488a03ea7bbaddc81e"
@@ -580,7 +596,7 @@
     "internal/modules",
     "internal/remote_api",
     "internal/urlfetch",
-    "urlfetch"
+    "urlfetch",
   ]
   pruneopts = "NT"
   revision = "e9657d882bb81064595ca3b56cbe2546bbabf7b1"
@@ -638,7 +654,7 @@
     "settings/v1alpha1",
     "storage/v1",
     "storage/v1alpha1",
-    "storage/v1beta1"
+    "storage/v1beta1",
   ]
   pruneopts = "NT"
   revision = "05914d821849570fba9eacfb29466f2d8d3cd229"
@@ -648,7 +664,7 @@
   name = "k8s.io/apiextensions-apiserver"
   packages = [
     "pkg/apis/apiextensions",
-    "pkg/apis/apiextensions/v1beta1"
+    "pkg/apis/apiextensions/v1beta1",
   ]
   pruneopts = "NT"
   revision = "0fe22c71c47604641d9aa352c785b7912c200562"
@@ -699,7 +715,7 @@
     "pkg/version",
     "pkg/watch",
     "third_party/forked/golang/json",
-    "third_party/forked/golang/reflect"
+    "third_party/forked/golang/reflect",
   ]
   pruneopts = "NT"
   revision = "2b1284ed4c93a43499e781493253e2ac5959c4fd"
@@ -775,7 +791,7 @@
     "util/integer",
     "util/jsonpath",
     "util/retry",
-    "util/workqueue"
+    "util/workqueue",
   ]
   pruneopts = "NT"
   revision = "8d9ed539ba3134352c586810e749e58df4e94e4f"
@@ -805,7 +821,7 @@
     "cmd/lister-gen",
     "cmd/lister-gen/args",
     "cmd/lister-gen/generators",
-    "pkg/util"
+    "pkg/util",
   ]
   pruneopts = "T"
   revision = "c2090bec4d9b1fb25de3812f868accc2bc9ecbae"
@@ -822,7 +838,7 @@
     "generator",
     "namer",
     "parser",
-    "types"
+    "types",
   ]
   pruneopts = "T"
   revision = "0689ccc1d7d65d9dd1bedcc3b0b1ed7df91ba266"
@@ -845,7 +861,7 @@
     "pkg/generators",
     "pkg/generators/rules",
     "pkg/util/proto",
-    "pkg/util/sets"
+    "pkg/util/sets",
   ]
   pruneopts = "NT"
   revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
@@ -882,7 +898,7 @@
     "pkg/webhook/admission",
     "pkg/webhook/admission/types",
     "pkg/webhook/internal/metrics",
-    "pkg/webhook/types"
+    "pkg/webhook/types",
   ]
   pruneopts = "NT"
   revision = "12d98582e72927b6cd0123e2b4e819f9341ce62c"
@@ -897,7 +913,7 @@
     "pkg/internal/codegen",
     "pkg/internal/codegen/parse",
     "pkg/internal/general",
-    "pkg/util"
+    "pkg/util",
   ]
   pruneopts = "NT"
   revision = "950a0e88e4effb864253b3c7504b326cc83b9d11"
@@ -915,6 +931,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1",
+    "github.com/getsentry/raven-go",
     "github.com/go-logr/logr",
     "github.com/go-openapi/spec",
     "github.com/leekchan/gtf",
@@ -955,7 +973,7 @@
     "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-runtime/pkg/source",
-    "sigs.k8s.io/controller-tools/pkg/crd/generator"
+    "sigs.k8s.io/controller-tools/pkg/crd/generator",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

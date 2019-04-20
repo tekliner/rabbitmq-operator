@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/getsentry/raven-go"
 	"github.com/go-logr/logr"
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 )
@@ -19,6 +20,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 	serviceAccount.username = username
 	if err != nil {
 		reqLogger.Info("Users: auth username not found")
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -26,6 +28,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 	serviceAccount.password = password
 	if err != nil {
 		reqLogger.Info("Users: auth password not found")
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -35,6 +38,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 	_, err = net.DialTimeout("tcp", r.apiServiceHostname(cr), timeout)
 	if err != nil {
 		reqLogger.Info("Rabbitmq API service failed", "Service name", r.apiServiceHostname(cr), "Error", err.Error())
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 	reqLogger.Info("Policies: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
@@ -47,6 +51,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 	policiesRabbit, err := r.apiPolicyList(reqLogger, cr, serviceAccount)
 	if err != nil {
 		reqLogger.Info("Error while receiving policies list", "Error", err.Error())
+		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
 
@@ -84,7 +89,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 		policyFound := false
 		for _, policyCR := range policiesCR {
 			if policyCR.Name == policyRabbit.Name {
-				policyFound =true
+				policyFound = true
 			}
 		}
 
@@ -92,6 +97,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 			reqLogger.Info("Removing " + policyRabbit.Name)
 			err = r.apiPolicyRemove(reqLogger, cr, serviceAccount, policyRabbit.Vhost, policyRabbit.Name)
 			if err != nil {
+				raven.CaptureErrorAndWait(err, nil)
 				return err
 			}
 		}
@@ -104,6 +110,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 		err = r.apiPolicyAdd(reqLogger, cr, serviceAccount, policyCR.Vhost, policyCR)
 		if err != nil {
 			reqLogger.Info("Error adding policy "+policyCR.Name+" to vhost "+policyCR.Vhost, "Error", err)
+			raven.CaptureErrorAndWait(err, nil)
 			return err
 		}
 	}
