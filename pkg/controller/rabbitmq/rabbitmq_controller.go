@@ -222,7 +222,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
-	if err = r.client.Update(context.TODO(), statefulset); err != nil {
+	if err = r.client.Update(context.TODO(), found); err != nil {
 		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
 		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
