@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -86,19 +87,19 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
 			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: a.Meta.GetLabels()["rabbitmq.improvado.io/name"], Namespace: a.Meta.GetNamespace()}},
+				{NamespacedName: types.NamespacedName{Name: a.Meta.GetLabels()["app.improvado.io/instance"], Namespace: a.Meta.GetNamespace()}},
 			}
 		})
 
 	p := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if _, ok := e.MetaOld.GetLabels()["rabbitmq.improvado.io/name"]; !ok {
+			if _, ok := e.MetaOld.GetLabels()["app.improvado.io/instance"]; !ok {
 				return false
 			}
 			return e.ObjectOld != e.ObjectNew
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			if _, ok := e.Meta.GetLabels()["rabbitmq.improvado.io/name"]; !ok {
+			if _, ok := e.Meta.GetLabels()["app.improvado.io/instance"]; !ok {
 				return false
 			}
 			return true
@@ -149,8 +150,8 @@ func mergeMaps(itermaps ...map[string]string) map[string]string {
 
 func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
-		"application": "rabbitmq",
-		"instance":    cr.Name,
+		"app.improvado.io/application": "rabbitmq",
+		"app.improvado.io/instance":    cr.Name,
 	}
 	return labels
 }
@@ -219,6 +220,19 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	} else if err != nil {
 		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
+	}
+
+	if !reflect.DeepEqual(found.Spec, statefulset.Spec) {
+		found.Spec.Replicas = statefulset.Spec.Replicas
+		found.Spec.Template = statefulset.Spec.Template
+	}
+
+	if !reflect.DeepEqual(found.Annotations, statefulset.Annotations) {
+		found.Annotations = statefulset.Annotations
+	}
+
+	if !reflect.DeepEqual(found.Labels, statefulset.Labels) {
+		found.Labels = statefulset.Labels
 	}
 
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
@@ -411,7 +425,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"component": "messaging"},
+				map[string]string{"app.improvado.io/component": "messaging"},
 			),
 			Annotations: returnAnnotations(cr),
 		},
@@ -479,7 +493,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"component": "messaging"},
+				map[string]string{"app.improvado.io/component": "messaging"},
 			),
 		},
 		Spec: v1.StatefulSetSpec{
