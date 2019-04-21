@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -219,6 +220,10 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	} else if err != nil {
 		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
+	}
+
+	if !reflect.DeepEqual(found.Spec, statefulset.Spec) {
+		found.Spec = statefulset.Spec
 	}
 
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
