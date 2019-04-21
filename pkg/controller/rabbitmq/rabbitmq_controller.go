@@ -223,7 +223,8 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	}
 
 	if !reflect.DeepEqual(found.Spec, statefulset.Spec) {
-		found.Spec = statefulset.Spec
+		found.Spec.Replicas = statefulset.Spec.Replicas
+		found.Spec.Template = statefulset.Spec.Template
 	}
 
 	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
