@@ -16,8 +16,7 @@ node {
         }
     }
 
-    stage ('Run deployments to staging') {
-        if (branch == 'master') {
+    if (branch == 'master') {
         stage ('Wait for confirmation of build promotion') {
             input message: 'Is this build ready for production?', submitter: 'tekliner'
         }
@@ -57,7 +56,6 @@ spec:
 """
             archiveArtifacts: 'operator.yaml'
             sh "kubectl apply -f operator.yaml -n messaging"
-            }
         }
     }
 }
