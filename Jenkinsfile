@@ -24,7 +24,7 @@ node {
         stage ('Deploy to production') {
             writeFile file: 'operator.yaml', text: """
 ---
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   name: rabbitmq-operator
@@ -32,11 +32,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      name: rabbitmq-operator
+      app: rabbitmq-operator
   template:
     metadata:
       labels:
-        name: rabbitmq-operator
+        app: rabbitmq-operator
     spec:
       serviceAccountName: rabbitmq-operator
       containers:
@@ -46,14 +46,14 @@ spec:
           - rabbitmq-operator
           imagePullPolicy: Always
           env:
-            - name: WATCH_NAMESPACE
-              value: ""
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "rabbitmq-operator"
+            - name: WATCH_NAMESPACE
+              value: "messaging"
 """
             archiveArtifacts: 'operator.yaml'
             sh "kubectl apply -f operator.yaml -n messaging"
