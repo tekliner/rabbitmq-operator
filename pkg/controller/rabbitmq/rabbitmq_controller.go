@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 	"reflect"
 	"strconv"
 	"time"
@@ -171,6 +172,34 @@ func returnAnnotations(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	return annotations
 }
 
+func (r *ReconcileRabbitmq) deleteDependentPVC(reqLogger logr.Logger, statefulset *v1.StatefulSet) error {
+
+	listOptions := &client.ListOptions{}
+	listOptions.InNamespace(statefulset.Namespace)
+	for _, label := range statefulset.Labels {
+		listOptions.SetLabelSelector(label)
+	}
+
+	listPVC := corev1.PersistentVolumeClaimList{}
+
+	err := r.client.List(context.Background(), listOptions, &listPVC)
+	if err != nil {
+		return err
+	}
+
+    for _, PVC := range listPVC.Items {
+
+    	// TODO: check names too, just for safety
+
+    	err := r.client.Delete(context.Background(), &PVC)
+    	if err != nil {
+    		return err
+		}
+	}
+
+    return nil
+}
+
 // Reconcile method
 func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
@@ -181,7 +210,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
+			// Request object not statefulsetFound, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
@@ -205,8 +234,8 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	found := &v1.StatefulSet{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: statefulset.Name, Namespace: statefulset.Namespace}, found)
+	statefulsetFound := &v1.StatefulSet{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: statefulset.Name, Namespace: statefulset.Namespace}, statefulsetFound)
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Creating a new statefulset", "statefulset.Namespace", statefulset.Namespace, "statefulset.Name", statefulset.Name)
 		err = r.client.Create(context.TODO(), statefulset)
@@ -222,22 +251,22 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		return reconcile.Result{}, err
 	}
 
-	if !reflect.DeepEqual(found.Spec, statefulset.Spec) {
-		found.Spec.Replicas = statefulset.Spec.Replicas
-		found.Spec.Template = statefulset.Spec.Template
+	if !reflect.DeepEqual(statefulsetFound.Spec, statefulset.Spec) {
+		statefulsetFound.Spec.Replicas = statefulset.Spec.Replicas
+		statefulsetFound.Spec.Template = statefulset.Spec.Template
 	}
 
-	if !reflect.DeepEqual(found.Annotations, statefulset.Annotations) {
-		found.Annotations = statefulset.Annotations
+	if !reflect.DeepEqual(statefulsetFound.Annotations, statefulset.Annotations) {
+		statefulsetFound.Annotations = statefulset.Annotations
 	}
 
-	if !reflect.DeepEqual(found.Labels, statefulset.Labels) {
-		found.Labels = statefulset.Labels
+	if !reflect.DeepEqual(statefulsetFound.Labels, statefulset.Labels) {
+		statefulsetFound.Labels = statefulset.Labels
 	}
 
-	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
-	if err = r.client.Update(context.TODO(), found); err != nil {
-		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", found.Namespace, "statefulset.Name", found.Name)
+	reqLogger.Info("Reconcile statefulset", "statefulset.Namespace", statefulsetFound.Namespace, "statefulset.Name", statefulsetFound.Name)
+	if err = r.client.Update(context.TODO(), statefulsetFound); err != nil {
+		reqLogger.Info("Reconcile statefulset error", "statefulset.Namespace", statefulsetFound.Namespace, "statefulset.Name", statefulsetFound.Name)
 		raven.CaptureErrorAndWait(err, nil)
 		return reconcile.Result{}, err
 	}
@@ -319,6 +348,41 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		case <-ctxUsers.Done():
 			timeoutFlagUsers = true
 		}
+	}
+
+	// add finalizer, need to wipe PVC after CR deletion
+	rabbitFinalizer := "rabbit-operator/killpvc"
+
+	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !containsString(instance.ObjectMeta.Finalizers, rabbitFinalizer) {
+			instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, rabbitFinalizer)
+			if err := r.client.Update(context.Background(), instance); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+	} else {
+
+		if containsString(instance.ObjectMeta.Finalizers, rabbitFinalizer) {
+
+			// remove PVCs
+			if err := r.deleteDependentPVC(reqLogger, statefulsetFound); err != nil {
+				raven.CaptureErrorAndWait(err, nil)
+				return reconcile.Result{}, err
+			}
+
+			// remove finalizer
+			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, rabbitFinalizer)
+
+			// update CR
+			if err := r.client.Update(context.Background(), instance); err != nil {
+				raven.CaptureErrorAndWait(err, nil)
+				return reconcile.Result{}, err
+			}
+
+		}
+
+		return reconcile.Result{}, nil
+
 	}
 
 	return reconcile.Result{}, nil
@@ -477,6 +541,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 	PVCTemplate := corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "rabbit-data",
+			Finalizers: cr.ObjectMeta.Finalizers,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
