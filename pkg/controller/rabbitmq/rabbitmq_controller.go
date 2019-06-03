@@ -2,7 +2,6 @@ package rabbitmq
 
 import (
 	"context"
-	"github.com/go-logr/logr"
 	"reflect"
 	"strconv"
 	"time"
@@ -172,34 +171,6 @@ func returnAnnotations(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	return annotations
 }
 
-func (r *ReconcileRabbitmq) deleteDependentPVC(reqLogger logr.Logger, statefulset *v1.StatefulSet) error {
-
-	listOptions := &client.ListOptions{}
-	listOptions.InNamespace(statefulset.Namespace)
-	for _, label := range statefulset.Labels {
-		listOptions.SetLabelSelector(label)
-	}
-
-	listPVC := corev1.PersistentVolumeClaimList{}
-
-	err := r.client.List(context.Background(), listOptions, &listPVC)
-	if err != nil {
-		return err
-	}
-
-    for _, PVC := range listPVC.Items {
-
-    	// TODO: check names too, just for safety
-
-    	err := r.client.Delete(context.Background(), &PVC)
-    	if err != nil {
-    		return err
-		}
-	}
-
-    return nil
-}
-
 // Reconcile method
 func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
@@ -350,39 +321,10 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 	}
 
-	// add finalizer, need to wipe PVC after CR deletion
-	rabbitFinalizer := "rabbit-operator/killpvc"
-
-	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !containsString(instance.ObjectMeta.Finalizers, rabbitFinalizer) {
-			instance.ObjectMeta.Finalizers = append(instance.ObjectMeta.Finalizers, rabbitFinalizer)
-			if err := r.client.Update(context.Background(), instance); err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-	} else {
-
-		if containsString(instance.ObjectMeta.Finalizers, rabbitFinalizer) {
-
-			// remove PVCs
-			if err := r.deleteDependentPVC(reqLogger, statefulsetFound); err != nil {
-				raven.CaptureErrorAndWait(err, nil)
-				return reconcile.Result{}, err
-			}
-
-			// remove finalizer
-			instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, rabbitFinalizer)
-
-			// update CR
-			if err := r.client.Update(context.Background(), instance); err != nil {
-				raven.CaptureErrorAndWait(err, nil)
-				return reconcile.Result{}, err
-			}
-
-		}
-
-		return reconcile.Result{}, nil
-
+	_, err = r.reconcileFinalizers(reqLogger, instance)
+	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
@@ -540,7 +482,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 
 	PVCTemplate := corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "rabbit-data",
+			Name:       "rabbit-data",
 			Finalizers: cr.ObjectMeta.Finalizers,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
