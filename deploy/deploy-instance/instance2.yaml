@@ -1,0 +1,46 @@
+---
+apiVersion: rabbitmq.improvado.io/v1
+kind: Rabbitmq
+metadata:
+  name: purge-rabbit
+spec:
+  replicas: 2
+  image:
+    name: rabbitmq
+    tag: 3-alpine
+  #secret_credentials: rabbit-users
+  #secret_service_account: rabbit-service
+
+  # comment or set 0 if no exporter needed
+  prometheus_exporter_port: 9091
+  #prometheus_image: "kbudde/rabbitmq-exporter:v0.28.0"
+
+  memory_high_watermark: 256M
+
+  # create unprivileged serviceaccount by hands
+  # and write it here
+  k8s_serviceaccount: "rabbitmq-operator"
+
+  k8s_host: "kubernetes.default.svc.cluster.imp"
+  k8s_service_discovery: "svc.cluster.imp"
+  k8s_addrtype: hostname
+  cluster_node_cleanup_interval: 10
+  auth:
+    enabled: true
+    mechanisms:
+      - PLAIN
+      - AMQPLAIN
+
+  volume_size: 1Gi
+  purgePVC: true
+
+  policies:
+    - name: ha-three
+      vhost: "rabbit"
+      pattern: ".*"
+      definition:
+        ha-mode: "exactly"
+        ha-params: 3
+        ha-sync-mode: "automatic"
+      priority: 0
+      apply-to: all

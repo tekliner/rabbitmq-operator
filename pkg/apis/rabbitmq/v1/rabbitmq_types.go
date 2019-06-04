@@ -118,6 +118,8 @@ type RabbitmqSpec struct {
 	RabbitmqClusterPartitionHandling    string              `json:"cluster_partition_handling"`
 	RabbitmqPrometheusExporterPort      int32               `json:"prometheus_exporter_port,omitempty"`
 	RabbitmqPrometheusImage             string              `json:"prometheus_image,omitempty"`
+
+	RabbitmqUseServiceMonitor bool `json:"use_service_monitor,omitempty"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq

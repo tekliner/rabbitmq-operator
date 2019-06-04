@@ -35,7 +35,7 @@ func (r *ReconcileRabbitmq) deleteDependentResoucePVC(reqLogger logr.Logger, cr 
 }
 
 func (r *ReconcileRabbitmq) reconcileFinalizers(reqLogger logr.Logger, instance *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
-
+	reqLogger.Info("Processing finalizers", "Namespace", instance.Namespace, ".Name", instance.Name)
 	// Define finalizer strings to prevent deletion of CR before dependent resources deletion
 	finalizersList := []string{"PVC"}
 

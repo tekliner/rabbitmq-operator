@@ -280,6 +280,10 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 			raven.CaptureErrorAndWait(err, nil)
 			return reconcile.Result{}, err
 		}
+	}
+
+	// use ServiceMonitor?
+	if instance.Spec.RabbitmqUseServiceMonitor {
 		_, err = r.reconcilePrometheusExporterServiceMonitor(reqLogger, instance)
 		if err != nil {
 			raven.CaptureErrorAndWait(err, nil)
