@@ -1,11 +1,10 @@
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: rabbitmq-operator
 subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: system:serviceaccount:messaging:rabbitmq-operator
+- kind: ServiceAccount
+  name: rabbitmq-operator
 roleRef:
   kind: ClusterRole
   name: rabbitmq-operator

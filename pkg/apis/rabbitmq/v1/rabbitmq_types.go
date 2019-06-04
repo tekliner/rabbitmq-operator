@@ -103,6 +103,8 @@ type RabbitmqSpec struct {
 	// TODO: additional labels
 	K8SLabels []metav1.LabelSelector `json:"k8s_labels"`
 
+	// purge all PVC after CR deletion, default false
+	RabbitmqPurgePVC bool `json:"purgePVC,omitempty"`
 	// PersistentVolumeClaim in k8s style
 	RabbitmqVolumeSize resource.Quantity `json:"volume_size"`
 
@@ -114,8 +116,10 @@ type RabbitmqSpec struct {
 	RabbitmqK8SPeerDiscoveryBackend     string              `json:"k8s_peer_discovery_backend"`
 	RabbitmqClusterFormationNodeCleanup int64               `json:"cluster_node_cleanup_interval"`
 	RabbitmqClusterPartitionHandling    string              `json:"cluster_partition_handling"`
-	RabbitmqPrometheusExporterPort 		int32 				`json:"prometheus_exporter_port,omitempty"`
-	RabbitmqPrometheusImage				string				`json:"prometheus_image,omitempty"`
+	RabbitmqPrometheusExporterPort      int32               `json:"prometheus_exporter_port,omitempty"`
+	RabbitmqPrometheusImage             string              `json:"prometheus_image,omitempty"`
+
+	RabbitmqUseServiceMonitor bool `json:"use_service_monitor,omitempty"`
 }
 
 // RabbitmqStatus defines the observed state of Rabbitmq

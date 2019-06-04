@@ -1,8 +1,8 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: rabbitmq-instance
+  name: rabbitmq-operator
 rules:
 - apiGroups:
   - ""
@@ -21,14 +21,22 @@ rules:
   resources:
   - namespaces
   verbs:
-  - '*'
+  - get
 - apiGroups:
   - apps
   resources:
+  - deployments
+  - daemonsets
   - replicasets
   - statefulsets
   verbs:
   - '*'
+- apiGroups:
+    - batch
+  resources:
+    - jobs
+  verbs:
+    - '*'
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -36,6 +44,8 @@ rules:
   verbs:
   - get
   - create
+  - list
+  - watch
 - apiGroups:
   - rabbitmq.improvado.io
   resources:
