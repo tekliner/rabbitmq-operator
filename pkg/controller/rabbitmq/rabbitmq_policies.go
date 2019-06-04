@@ -41,7 +41,7 @@ func (r *ReconcileRabbitmq) setPolicies(ctx context.Context, reqLogger logr.Logg
 		raven.CaptureErrorAndWait(err, nil)
 		return err
 	}
-	reqLogger.Info("Policies: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username, "password", serviceAccount.password)
+	reqLogger.Info("Policies: Using API service: "+r.apiServiceAddress(cr), "username", serviceAccount.username)
 
 	var policiesCR []rabbitmqv1.RabbitmqPolicy
 
