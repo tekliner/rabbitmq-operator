@@ -87,7 +87,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 	for userName, userPassword := range usersSecret.Data {
 		reqLogger.Info("Adding user " + userName)
 
-		err = r.apiUserAdd(reqLogger, cr, serviceAccount, rabbitmqUserStruct{Name: userName, Password: string(userPassword), Tags: "management"})
+		err = r.apiUserAdd(reqLogger, cr, serviceAccount, rabbitmqUserStruct{Name: userName, Password: string(userPassword), Tags: "administrator"})
 		if err != nil {
 			reqLogger.Info("Error adding user "+userName, "Error", err)
 			raven.CaptureErrorAndWait(err, nil)
