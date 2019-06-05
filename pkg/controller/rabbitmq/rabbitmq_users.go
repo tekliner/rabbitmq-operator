@@ -46,7 +46,7 @@ func (r *ReconcileRabbitmq) syncUsersCredentials(ctx context.Context, reqLogger 
 
 	// get user from secret
 	usersSecret, err := r.getSecret(secretNames.Credentials, cr.Namespace)
-	reqLogger.Info("Users from secret", "CRD", cr.Name, "SecretNames", secretNames, "Users", usersSecret, "ServiceAccount", serviceAccount.username)
+	reqLogger.Info("Users from secret", "CRD", cr.Name, "SecretNames", secretNames, "Credentials secret", usersSecret.Name, "ServiceAccount", serviceAccount.username)
 
 	// get users from rabbit api
 	reqLogger.Info("Reading all users from rabbitmq")
