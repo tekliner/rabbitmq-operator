@@ -369,6 +369,12 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 	// prepare containers for pod
 	podContainers := []corev1.Container{}
 
+	// check affinity rules
+	affinity := &corev1.Affinity{}
+	if cr.Spec.RabbitmqAffinity != nil {
+		affinity = cr.Spec.RabbitmqAffinity
+	}
+
 	// container with rabbitmq
 	rabbitmqContainer := corev1.Container{
 		Name:  "rabbitmq",
@@ -440,6 +446,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Annotations: returnAnnotations(cr),
 		},
 		Spec: corev1.PodSpec{
+			Affinity:           affinity,
 			ServiceAccountName: cr.Spec.RabbitmqK8SServiceAccount,
 			InitContainers: []corev1.Container{
 				{
