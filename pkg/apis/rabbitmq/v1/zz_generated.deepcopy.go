@@ -218,6 +218,11 @@ func (in *RabbitmqSpec) DeepCopyInto(out *RabbitmqSpec) {
 			(*out)[key] = val.DeepCopy()
 		}
 	}
+	if in.RabbitmqAffinity != nil {
+		in, out := &in.RabbitmqAffinity, &out.RabbitmqAffinity
+		*out = new(corev1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

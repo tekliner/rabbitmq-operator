@@ -119,6 +119,8 @@ type RabbitmqSpec struct {
 	RabbitmqPrometheusExporterPort      int32               `json:"prometheus_exporter_port,omitempty"`
 	RabbitmqPrometheusImage             string              `json:"prometheus_image,omitempty"`
 
+	RabbitmqAffinity *corev1.Affinity `json:"affinity,omitempty"`
+
 	RabbitmqUseServiceMonitor bool `json:"use_service_monitor,omitempty"`
 }
 
