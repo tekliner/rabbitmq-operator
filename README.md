@@ -11,6 +11,18 @@ metadata:
   name: imp20rabbit
 spec:
   replicas: 2
+  
+  # set affinity and anti-affinity
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: security
+            operator: In
+            values:
+            - S1
+        topologyKey: failure-domain.beta.kubernetes.io/zonei
 
   # set rabbitmq docker image, use hub.docker.com or your own
   image:
