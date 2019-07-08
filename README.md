@@ -44,8 +44,6 @@ spec:
   cluster_formation.node_cleanup.only_log_warning: true
   cluster_partition_handling: autoheal
 
-  loopback_users.guest = false
-
   hipe_compile: false
 
   # PVC
