@@ -23,6 +23,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: SENTRY_DSN
+              value: "https://983d2bf5d8f247e98b89d179b737a48d:f3133ece803044fa8491775da2d56cf5@sentry.tools.improvado.io/37"
             - name: OPERATOR_NAME
               value: "rabbitmq-operator"
             - name: WATCH_NAMESPACE
