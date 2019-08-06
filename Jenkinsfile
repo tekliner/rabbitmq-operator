@@ -93,6 +93,23 @@ spec:
               value: "rabbitmq-operator"
             - name: WATCH_NAMESPACE
               value: "rabbitmq-operator-${branch}"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rabbitmq-operator
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: rabbitmq-operator
+subjects:
+- kind: ServiceAccount
+  name: rabbitmq-operator
+roleRef:
+  kind: ClusterRole
+  name: rabbitmq-operator
+  apiGroup: rbac.authorization.k8s.io
 """
             archiveArtifacts: 'operator.yaml'
             // create separated namespace and deploy operator into it
