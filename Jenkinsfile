@@ -93,40 +93,13 @@ spec:
               value: "rabbitmq-operator"
             - name: WATCH_NAMESPACE
               value: "rabbitmq-operator-${branch}"
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: rabbitmq-operator
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: rabbitmq-operator
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: system:serviceaccount:rabbitmq-operator-${branch}:rabbitmq-operator
-roleRef:
-  kind: ClusterRole
-  name: rabbitmq-operator
-  apiGroup: rbac.authorization.k8s.io
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: rabbitmq-operator
-subjects:
-- kind: ServiceAccount
-  name: rabbitmq-operator
-roleRef:
-  kind: ClusterRole
-  name: rabbitmq-operator
-  apiGroup: rbac.authorization.k8s.io
 """
             archiveArtifacts: 'operator.yaml'
             // create separated namespace and deploy operator into it
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl create ns rabbitmq-operator-${branch} || true"
+            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role.yaml -n rabbitmq-operator-${branch} || true"
+            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/service_account.yaml -n rabbitmq-operator-${branch} || true"
+            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role_binding.yaml -n rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f operator.yaml -n rabbitmq-operator-${branch} || true"
         }
     }

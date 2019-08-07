@@ -6,6 +6,6 @@ subjects:
 - kind: ServiceAccount
   name: rabbitmq-operator
 roleRef:
-  kind: ClusterRole
+  kind: Role
   name: rabbitmq-operator
   apiGroup: rbac.authorization.k8s.io
