@@ -53,7 +53,7 @@ spec:
             - name: OPERATOR_NAME
               value: "rabbitmq-operator"
             - name: WATCH_NAMESPACE
-              value: "messaging"
+              value: ""
 """
             archiveArtifacts: 'operator.yaml'
             sh "kubectl apply -f operator.yaml -n messaging"
@@ -97,7 +97,6 @@ spec:
             archiveArtifacts: 'operator.yaml'
             // create separated namespace and deploy operator into it
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl create ns rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role.yaml -n rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/service_account.yaml -n rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role_binding.yaml -n rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f operator.yaml -n rabbitmq-operator-${branch} || true"
