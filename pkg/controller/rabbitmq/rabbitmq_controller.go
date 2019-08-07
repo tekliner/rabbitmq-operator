@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"strconv"
 	"time"
@@ -27,7 +28,10 @@ import (
 )
 
 func init() {
-	raven.SetDSN("https://983d2bf5d8f247e98b89d179b737a48d:f3133ece803044fa8491775da2d56cf5@sentry.tools.improvado.io/37")
+	sentryDSN := os.Getenv("SENTRY_DSN")
+	if sentryDSN != "" {
+		raven.SetDSN(sentryDSN)
+	}
 }
 
 var log = logf.Log.WithName("controller_rabbitmq")
