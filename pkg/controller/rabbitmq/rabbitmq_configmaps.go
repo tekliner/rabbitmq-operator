@@ -85,11 +85,23 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 	}
 
 	defaultUsername := string(secretObj.Data["username"])
+	if defaultUsername == "" {
+		reqLogger.Info("Empty service username", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name)
+		return reconcile.Result{}, err
+	}
 	templateData.DefaultUser = defaultUsername
 	defaultPassword := string(secretObj.Data["password"])
+	if defaultPassword == "" {
+		reqLogger.Info("Empty service password", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name)
+		return reconcile.Result{}, err
+	}
 	templateData.DefaultPassword = defaultPassword
 	cookieData := string(secretObj.Data["cookie"])
-	reqLogger.Info("Configmap decoded secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret decoded", cookieData)
+	if cookieData == "" {
+		reqLogger.Info("Empty cookie data", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name)
+		return reconcile.Result{}, err
+	}
+	reqLogger.Info("Configmap decoded secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret cookie", cookieData)
 
 	templateData.Spec = cr.Spec
 

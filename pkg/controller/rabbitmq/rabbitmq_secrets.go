@@ -65,7 +65,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("Service Account linked: error happend", err)
-			return secretNames, err
+			return secretResouces{}, err
 		}
 	} else {
 		// link empty, search standart service account secret
@@ -80,7 +80,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("Service Account standart: error happend", err)
-			return secretNames, err
+			return secretResouces{}, err
 		}
 	}
 
@@ -101,13 +101,13 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		}
 
 		if err := controllerutil.SetControllerReference(cr, secretSAResource, r.scheme); err != nil {
-			return secretNames, err
+			return secretResouces{}, err
 		}
 
 		err := r.client.Create(context.TODO(), secretSAResource)
 
 		if err != nil {
-			return secretNames, err
+			return secretResouces{}, err
 		}
 
 	}
@@ -130,7 +130,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("User credentials: error happend", err)
-			return secretNames, err
+			return secretResouces{}, err
 		}
 		secretNames.Credentials = cr.Spec.RabbitmqSecretCredentials
 	} else {
@@ -145,7 +145,7 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		} else if err != nil {
 			// happend something else, do nothing
 			reqLogger.Info("User credentials standart: error happend", err)
-			return secretNames, err
+			return secretResouces{}, err
 		}
 	}
 
@@ -162,12 +162,12 @@ func (r *ReconcileRabbitmq) reconcileSecrets(reqLogger logr.Logger, cr *rabbitmq
 		}
 
 		if err := controllerutil.SetControllerReference(cr, secretCredResourceNew, r.scheme); err != nil {
-			return secretNames, err
+			return secretResouces{}, err
 		}
 
 		err := r.client.Create(context.TODO(), secretCredResourceNew)
 		if err != nil {
-			return secretNames, err
+			return secretResouces{}, err
 		}
 
 	}
