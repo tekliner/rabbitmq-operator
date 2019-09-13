@@ -474,6 +474,8 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 				},
 			},
 			Containers: podContainers,
+			Tolerations: cr.Spec.Tolerations,
+			NodeSelector: cr.Spec.NodeSelector,
 			Volumes: []corev1.Volume{
 				{
 					Name: "rabbit-config",

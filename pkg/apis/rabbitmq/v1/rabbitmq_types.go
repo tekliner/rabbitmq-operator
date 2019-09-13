@@ -120,6 +120,8 @@ type RabbitmqSpec struct {
 	RabbitmqPrometheusImage             string              `json:"prometheus_image,omitempty"`
 
 	RabbitmqAffinity *corev1.Affinity `json:"affinity,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector"`
+	Tolerations []corev1.Toleration `json:"tolerations"`
 
 	RabbitmqUseServiceMonitor bool `json:"use_service_monitor,omitempty"`
 }
