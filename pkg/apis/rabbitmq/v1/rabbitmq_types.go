@@ -2,6 +2,7 @@ package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,6 +60,10 @@ type RabbitmqSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=10
 	RabbitmqReplicas int32 `json:"replicas"`
+
+	// set PodDisruptionBudget. Default values: if replicas >= 2, minA = 1
+	// else if replicas = 1, maxU = 1
+	RabbitmqPdb v1beta1.PodDisruptionBudget `json:"pdb,omitempty"`
 
 	// set default_vhost, if empty falling to "%2f" (/)
 	RabbitmqVhost string `json:"default_vhost,omitempty"`
@@ -119,9 +124,9 @@ type RabbitmqSpec struct {
 	RabbitmqPrometheusExporterPort      int32               `json:"prometheus_exporter_port,omitempty"`
 	RabbitmqPrometheusImage             string              `json:"prometheus_image,omitempty"`
 
-	RabbitmqAffinity *corev1.Affinity `json:"affinity,omitempty"`
-	NodeSelector map[string]string `json:"nodeSelector"`
-	Tolerations []corev1.Toleration `json:"tolerations"`
+	RabbitmqAffinity *corev1.Affinity    `json:"affinity,omitempty"`
+	NodeSelector     map[string]string   `json:"nodeSelector"`
+	Tolerations      []corev1.Toleration `json:"tolerations"`
 
 	RabbitmqUseServiceMonitor bool `json:"use_service_monitor,omitempty"`
 }
