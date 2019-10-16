@@ -13,7 +13,9 @@ import (
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 )
 
-func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq, pdb *v1beta1policy.PodDisruptionBudget) (reconcile.Result, error) {
+func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger,
+	cr *rabbitmqv1.Rabbitmq,
+	pdb *v1beta1policy.PodDisruptionBudget) (reconcile.Result, error) {
 	reqLogger.Info("Started reconciling PodDisruptionBudget", "Pdb.Namespace", pdb.Namespace, "Pdb.Name", pdb.Name)
 
 	if err := controllerutil.SetControllerReference(cr, pdb, r.scheme); err != nil {
