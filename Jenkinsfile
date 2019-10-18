@@ -57,6 +57,7 @@ spec:
 """
             archiveArtifacts: 'operator.yaml'
             sh "kubectl apply -f operator.yaml -n messaging"
+            sh "kubectl apply -f deploy/deploy-operator-default/clusterrole.yaml"
         }
     } else {
       // deploy PR to sandbox
