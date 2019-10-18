@@ -2,13 +2,13 @@ package rabbitmq
 
 import (
 	"context"
+	"github.com/getsentry/raven-go"
 	"github.com/go-logr/logr"
 	v1beta1policy "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -32,7 +32,6 @@ func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger, cr *rabbitmqv1.R
 	if err != nil && apierrors.IsNotFound(err) {
 		reqLogger.Info("No PodDisruptionBudget found, creating new", "Pdb.Namespace", &newPdb.Namespace, "Pdb.Name", &newPdb.Name)
 		err = r.client.Create(context.TODO(), &newPdb)
-
 		foundPdb = &newPdb
 
 		if err != nil {
@@ -42,27 +41,17 @@ func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger, cr *rabbitmqv1.R
 	} else if err != nil {
 		reqLogger.Info("Error getting PodDisruptionBudget", "Pdb.Namespace", &newPdb.Namespace, "Pdb.Name", &newPdb.Name)
 		return reconcile.Result{}, err
+	} else {
+		if reconcileRequired, reconPdb := reconcilePdb(reqLogger, *foundPdb, newPdb); reconcileRequired {
+			reqLogger.Info("Updating PodDisruptionBudget", "Namespace", reconPdb.Namespace, "Name", reconPdb.Name)
+			if err = r.client.Update(context.TODO(), &reconPdb); err != nil {
+				reqLogger.Info("Reconcile PodDisruptionBudget error", "Namespace", foundPdb.Namespace, "Name", foundPdb.Name)
+				raven.CaptureErrorAndWait(err, nil)
+				return reconcile.Result{}, err
+			}
+		}
 	}
 
-	if !reflect.DeepEqual(foundPdb.Spec.Selector, &newPdb.Spec.Selector) {
-		reqLogger.Info("Selectors not deep equal", "Pdb.Namespace", &newPdb.Namespace, "Pdb.Name", &newPdb.Name)
-		foundPdb.Spec.Selector = newPdb.Spec.Selector
-	}
-
-	if !reflect.DeepEqual(foundPdb.Spec.MaxUnavailable, &newPdb.Spec.MaxUnavailable) {
-		reqLogger.Info("MaxUnavailable not deep equal", "Pdb.Namespace", &newPdb.Namespace, "Pdb.Name", &newPdb.Name)
-		foundPdb.Spec.MaxUnavailable = newPdb.Spec.MaxUnavailable
-	}
-
-	if !reflect.DeepEqual(foundPdb.Spec.MinAvailable, &newPdb.Spec.MinAvailable) {
-		reqLogger.Info("MinAvailable not deep equal", "Pdb.Namespace", &newPdb.Namespace, "Pdb.Name", &newPdb.Name)
-		foundPdb.Spec.MaxUnavailable = newPdb.Spec.MaxUnavailable
-	}
-
-	if err = r.client.Update(context.TODO(), foundPdb); err != nil {
-		reqLogger.Info("Error updating PodDisruptionBudget", "Pdb.Namespace", &newPdb.Namespace, "Pdb.Name", &newPdb.Name)
-		return reconcile.Result{}, err
-	}
 	return reconcile.Result{}, nil
 }
 
