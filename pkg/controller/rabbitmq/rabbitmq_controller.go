@@ -329,6 +329,15 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 	}
 
+	// reconcile PodDisruptionBudget
+	reqLogger.Info("Reconciling PodDisruptionBudget")
+
+	_, err = r.reconcilePdb(reqLogger, instance)
+	if err != nil {
+		raven.CaptureErrorAndWait(err, nil)
+		return reconcile.Result{}, err
+	}
+
 	_, err = r.reconcileFinalizers(reqLogger, instance)
 	if err != nil {
 		raven.CaptureErrorAndWait(err, nil)
@@ -473,8 +482,8 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 					},
 				},
 			},
-			Containers: podContainers,
-			Tolerations: cr.Spec.Tolerations,
+			Containers:   podContainers,
+			Tolerations:  cr.Spec.Tolerations,
 			NodeSelector: cr.Spec.NodeSelector,
 			Volumes: []corev1.Volume{
 				{

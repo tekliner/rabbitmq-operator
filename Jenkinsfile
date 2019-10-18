@@ -57,6 +57,7 @@ spec:
 """
             archiveArtifacts: 'operator.yaml'
             sh "kubectl apply -f operator.yaml -n messaging"
+            sh "kubectl apply -f deploy/deploy-operator-default/clusterrole.yaml"
         }
     } else {
       // deploy PR to sandbox
@@ -99,6 +100,9 @@ spec:
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl create ns rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/service_account.yaml -n rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role_binding.yaml -n rabbitmq-operator-${branch} || true"
+            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role.yaml -n rabbitmq-operator-${branch} || true"
+            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/clusterrole.yaml -n rabbitmq-operator-${branch} || true"
+            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/clusterrolebinding.yaml -n rabbitmq-operator-${branch} || true"
             sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f operator.yaml -n rabbitmq-operator-${branch} || true"
         }
     }
