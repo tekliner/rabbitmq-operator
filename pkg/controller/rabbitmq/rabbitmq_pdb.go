@@ -57,7 +57,11 @@ func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger, cr *rabbitmqv1.R
 
 func getDisruptionBudget(cr *rabbitmqv1.Rabbitmq) v1beta1policy.PodDisruptionBudget {
 	podDisruptionBudget := v1beta1policy.PodDisruptionBudget{}
-	labelSelector := metav1.LabelSelector{MatchLabels: cr.Labels}
+	labelSelector := metav1.LabelSelector{
+		MatchLabels: mergeMaps(returnLabels(cr),
+			map[string]string{"app.improvado.io/component": "messaging"},
+		),
+	}
 	if cr.Spec.RabbitmqReplicas >= 2 {
 		specPDB := v1beta1policy.PodDisruptionBudgetSpec{Selector: &labelSelector}
 
@@ -93,5 +97,4 @@ func getDisruptionBudget(cr *rabbitmqv1.Rabbitmq) v1beta1policy.PodDisruptionBud
 		}
 	}
 	return podDisruptionBudget
-
 }
