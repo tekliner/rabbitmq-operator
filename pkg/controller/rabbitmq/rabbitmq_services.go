@@ -54,6 +54,10 @@ func (r *ReconcileRabbitmq) reconcileService(reqLogger logr.Logger, cr *rabbitmq
 		found.Spec.Selector = service.Spec.Selector
 	}
 
+	if !reflect.DeepEqual(found.Labels, service.Labels) {
+		found.Labels = service.Labels
+	}
+
 	if err = r.client.Update(context.TODO(), found); err != nil {
 		reqLogger.Info("Error updating service", "Service.Namespace", service.Namespace, "Service.Name", service.Name)
 		return reconcile.Result{}, err
@@ -126,10 +130,6 @@ func (r *ReconcileRabbitmq) reconcileHAService(reqLogger logr.Logger, cr *rabbit
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
-			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"rabbitmq.improvado.io/service": "general"},
-				map[string]string{"rabbitmq.improvado.io/component": "networking"},
-			),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:     corev1.ServiceTypeClusterIP,
@@ -169,8 +169,7 @@ func (r *ReconcileRabbitmq) reconcileHTTPService(reqLogger logr.Logger, cr *rabb
 			Name:      cr.Name + "-api",
 			Namespace: cr.Namespace,
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"rabbitmq.improvado.io/service": "api"},
-				map[string]string{"rabbitmq.improvado.io/component": "networking"},
+				map[string]string{"rabbitmq.improvado.io/service": "management"},
 			),
 		},
 		Spec: corev1.ServiceSpec{
@@ -199,9 +198,7 @@ func (r *ReconcileRabbitmq) reconcilePrometheusExporterService(reqLogger logr.Lo
 			Name:      cr.Name + "-exporter",
 			Namespace: cr.Namespace,
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"rabbitmq.improvado.io/service": "prometheus-exporter"},
 				map[string]string{"rabbitmq.improvado.io/component": "monitoring"},
-				map[string]string{"rabbitmq.improvado.io/component": "networking"},
 			),
 		},
 		Spec: corev1.ServiceSpec{
@@ -233,11 +230,7 @@ func (r *ReconcileRabbitmq) reconcilePrometheusExporterServiceMonitor(reqLogger 
 		},
 		Spec: v12.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
-				MatchLabels: mergeMaps(returnLabels(cr),
-					map[string]string{"rabbitmq.improvado.io/service": "prometheus-exporter"},
-					map[string]string{"rabbitmq.improvado.io/component": "monitoring"},
-					map[string]string{"rabbitmq.improvado.io/component": "networking"},
-				),
+				MatchLabels: returnLabels(cr),
 			},
 			Endpoints: []v12.Endpoint{
 				{

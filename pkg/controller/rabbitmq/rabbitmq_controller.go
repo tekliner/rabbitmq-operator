@@ -91,19 +91,19 @@ func add(mgr manager.Manager, reconciler reconcile.Reconciler) error {
 	mapFn := handler.ToRequestsFunc(
 		func(a handler.MapObject) []reconcile.Request {
 			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: a.Meta.GetLabels()["app.improvado.io/instance"], Namespace: a.Meta.GetNamespace()}},
+				{NamespacedName: types.NamespacedName{Name: a.Meta.GetLabels()["rabbitmq.improvado.io/instance"], Namespace: a.Meta.GetNamespace()}},
 			}
 		})
 
 	p := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			if _, ok := e.MetaOld.GetLabels()["app.improvado.io/instance"]; !ok {
+			if _, ok := e.MetaOld.GetLabels()["rabbitmq.improvado.io/instance"]; !ok {
 				return false
 			}
 			return e.ObjectOld != e.ObjectNew
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			if _, ok := e.Meta.GetLabels()["app.improvado.io/instance"]; !ok {
+			if _, ok := e.Meta.GetLabels()["rabbitmq.improvado.io/instance"]; !ok {
 				return false
 			}
 			return true
@@ -154,8 +154,7 @@ func mergeMaps(itermaps ...map[string]string) map[string]string {
 
 func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
-		"app.improvado.io/application": "rabbitmq",
-		"app.improvado.io/instance":    cr.Name,
+		"rabbitmq.improvado.io/instance":      cr.Name,
 	}
 	return labels
 }
@@ -454,7 +453,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"app.improvado.io/component": "messaging"},
+				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
 			),
 			Annotations: returnAnnotations(cr),
 		},
@@ -526,7 +525,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"app.improvado.io/component": "messaging"},
+				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
 			),
 		},
 		Spec: v1.StatefulSetSpec{
