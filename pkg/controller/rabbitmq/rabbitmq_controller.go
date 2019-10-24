@@ -452,9 +452,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: mergeMaps(returnLabels(cr),
-				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
-			),
+			Labels: returnLabels(cr),
 			Annotations: returnAnnotations(cr),
 		},
 		Spec: corev1.PodSpec{
