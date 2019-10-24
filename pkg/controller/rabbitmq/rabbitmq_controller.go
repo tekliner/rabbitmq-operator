@@ -228,6 +228,7 @@ func (r *ReconcileRabbitmq) Reconcile(request reconcile.Request) (reconcile.Resu
 	if !reflect.DeepEqual(statefulsetFound.Spec, statefulset.Spec) {
 		statefulsetFound.Spec.Replicas = statefulset.Spec.Replicas
 		statefulsetFound.Spec.Template = statefulset.Spec.Template
+		statefulsetFound.Spec.Selector = statefulset.Spec.Selector
 	}
 
 	if !reflect.DeepEqual(statefulsetFound.Annotations, statefulset.Annotations) {
