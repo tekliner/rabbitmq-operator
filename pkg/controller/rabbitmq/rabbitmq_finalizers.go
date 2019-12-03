@@ -10,6 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const RabbitmqPVCFinalizer = "pvc.rabbitmq.improvado.io"
+
 func (r *ReconcileRabbitmq) deleteDependentResoucePVC(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
 	reqLogger.Info("Deleting PVC")
 	// Finalizer PVC: remove finalizer from CR
@@ -37,7 +39,7 @@ func (r *ReconcileRabbitmq) deleteDependentResoucePVC(reqLogger logr.Logger, cr 
 func (r *ReconcileRabbitmq) reconcileFinalizers(reqLogger logr.Logger, instance *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
 	reqLogger.Info("Processing finalizers", "Namespace", instance.Namespace, ".Name", instance.Name)
 	// Define finalizer strings to prevent deletion of CR before dependent resources deletion
-	finalizersList := []string{"PVC"}
+	finalizersList := []string{RabbitmqPVCFinalizer}
 
 	// Check CR is being deleted or not
 	if instance.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -60,7 +62,7 @@ func (r *ReconcileRabbitmq) reconcileFinalizers(reqLogger logr.Logger, instance 
 		}
 
 		// Finalizer "PVC": remove "PVC" finalizer from CR
-		instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, "PVC")
+		instance.ObjectMeta.Finalizers = removeString(instance.ObjectMeta.Finalizers, RabbitmqPVCFinalizer)
 		if err := r.client.Update(context.Background(), instance); err != nil {
 			reqLogger.Info("Removing PVC finalizer failed")
 			return reconcile.Result{}, err
