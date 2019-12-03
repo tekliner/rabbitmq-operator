@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const RabbitmqPVCFinalizer = "pvc.rabbitmq.improvado.io"
+const RabbitmqPVCFinalizer = "rabbitmq.improvado.io/pvc"
 
 func (r *ReconcileRabbitmq) deleteDependentResoucePVC(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
 	reqLogger.Info("Deleting PVC")
