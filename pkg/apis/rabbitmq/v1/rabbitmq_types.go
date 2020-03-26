@@ -86,6 +86,8 @@ type RabbitmqSpec struct {
 	// TODO: auth mechanisms
 	RabbitmqAuth RabbitmqAuth `json:"auth,omitempty"`
 
+	RabbitmqStorageClass *string `json:"rabbitmq_storage_class,omitempty"`
+
 	// set rabbitmq policies
 	RabbitmqPolicies []RabbitmqPolicy `json:"policies"`
 
