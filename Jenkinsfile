@@ -24,7 +24,7 @@ node {
         stage ('Deploy to production') {
             writeFile file: 'operator.yaml', text: """
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rabbitmq-operator
@@ -64,7 +64,7 @@ spec:
         stage ('Deploy to sandbox') {
             writeFile file: 'operator.yaml', text: """
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rabbitmq-operator
