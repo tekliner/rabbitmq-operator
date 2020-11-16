@@ -76,6 +76,9 @@ type RabbitmqSpec struct {
 	// working now, but will be ignored in future versions
 	RabbitmqMemoryHighWatermark string `json:"memory_high_watermark,omitempty"`
 
+	// set disk_free_limit.absolute value
+	RabbitmqDiskFreeLimit string `json:"disk_free_limit,omitempty"`
+
 	// Hipe
 	RabbitmqHipeCompile bool `json:"hipe_compile,omitempty"`
 

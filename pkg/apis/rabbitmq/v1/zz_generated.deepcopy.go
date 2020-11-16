@@ -163,6 +163,11 @@ func (in *RabbitmqSpec) DeepCopyInto(out *RabbitmqSpec) {
 	in.RabbitmqPdb.DeepCopyInto(&out.RabbitmqPdb)
 	out.RabbitmqSSL = in.RabbitmqSSL
 	in.RabbitmqAuth.DeepCopyInto(&out.RabbitmqAuth)
+	if in.RabbitmqStorageClass != nil {
+		in, out := &in.RabbitmqStorageClass, &out.RabbitmqStorageClass
+		*out = new(string)
+		**out = **in
+	}
 	if in.RabbitmqPolicies != nil {
 		in, out := &in.RabbitmqPolicies, &out.RabbitmqPolicies
 		*out = make([]RabbitmqPolicy, len(*in))

@@ -36,6 +36,7 @@ cluster_partition_handling = {{ .Spec.RabbitmqClusterPartitionHandling | default
 loopback_users.guest = false
 hipe_compile = {{ .Spec.RabbitmqHipeCompile | default "false" }}
 vm_memory_high_watermark.absolute = {{ .Spec.RabbitmqMemoryHighWatermark }}
+disk_free_limit.absolute = {{ .Spec.RabbitmqDiskFreeLimit }}
 `
 
 const defaultRabbitmqPlugins = `[
