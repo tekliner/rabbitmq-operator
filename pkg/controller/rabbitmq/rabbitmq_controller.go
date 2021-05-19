@@ -154,7 +154,7 @@ func mergeMaps(itermaps ...map[string]string) map[string]string {
 
 func returnLabels(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	labels := map[string]string{
-		"rabbitmq.improvado.io/instance":      cr.Name,
+		"rabbitmq.improvado.io/instance": cr.Name,
 	}
 	return labels
 }
@@ -453,7 +453,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: returnLabels(cr),
+			Labels:      returnLabels(cr),
 			Annotations: returnAnnotations(cr),
 		},
 		Spec: corev1.PodSpec{
@@ -462,7 +462,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			InitContainers: []corev1.Container{
 				{
 					Name:    "copy-rabbitmq-config",
-					Image:   "busybox",
+					Image:   "harbor.tools.improvado.io/hub-cache/library/busybox",
 					Command: []string{"sh", "/rabbit-config/init.sh"},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -510,7 +510,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Finalizers: cr.ObjectMeta.Finalizers,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+			AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 			StorageClassName: cr.Spec.RabbitmqStorageClass,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
