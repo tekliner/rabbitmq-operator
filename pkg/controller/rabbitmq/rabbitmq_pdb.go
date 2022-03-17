@@ -16,7 +16,6 @@ import (
 )
 
 func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger, cr *rabbitmqv1.Rabbitmq) (reconcile.Result, error) {
-
 	newPdb := getDisruptionBudget(cr)
 	reqLogger.Info("Started reconciling PodDisruptionBudget", "Pdb.Namespace", newPdb.Namespace, "Pdb.Name", newPdb.Name)
 
@@ -58,9 +57,7 @@ func (r *ReconcileRabbitmq) reconcilePdb(reqLogger logr.Logger, cr *rabbitmqv1.R
 func getDisruptionBudget(cr *rabbitmqv1.Rabbitmq) v1beta1policy.PodDisruptionBudget {
 	podDisruptionBudget := v1beta1policy.PodDisruptionBudget{}
 	labelSelector := metav1.LabelSelector{
-		MatchLabels: mergeMaps(returnLabels(cr),
-			map[string]string{"app.improvado.io/component": "messaging"},
-		),
+		MatchLabels: returnLabels(cr),
 	}
 	if cr.Spec.RabbitmqReplicas >= 2 {
 		specPDB := v1beta1policy.PodDisruptionBudgetSpec{Selector: &labelSelector}
