@@ -11,7 +11,7 @@ WORKDIR /app/rabbitmq-operator/cmd/manager
 RUN CGO_ENABLED=0 go build -mod=vendor
 RUN go install -mod=vendor
 
-FROM alpine:3.10
+FROM alpine:3.17.1
 
 COPY --from=0 /go/bin/manager /usr/local/bin/rabbitmq-operator
 
