@@ -13,6 +13,8 @@ RUN go install -mod=vendor
 
 FROM alpine:3.17.1
 
+RUN apk update --no-cache && apk upgrade --no-cache
+
 COPY --from=0 /go/bin/manager /usr/local/bin/rabbitmq-operator
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
