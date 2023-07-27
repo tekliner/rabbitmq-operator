@@ -59,51 +59,5 @@ spec:
             sh "kubectl apply -f operator.yaml -n messaging"
             sh "kubectl apply -f deploy/deploy-operator-default/clusterrole.yaml"
         }
-    } else {
-      // deploy PR to sandbox
-        stage ('Deploy to sandbox') {
-            writeFile file: 'operator.yaml', text: """
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rabbitmq-operator
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: rabbitmq-operator
-  template:
-    metadata:
-      labels:
-        app: rabbitmq-operator
-    spec:
-      serviceAccountName: rabbitmq-operator
-      containers:
-        - name: rabbitmq-operator
-          image: 716309063777.dkr.ecr.us-east-1.amazonaws.com/rabbitmq-operator:${branch}-${build}
-          command:
-          - rabbitmq-operator
-          imagePullPolicy: Always
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "rabbitmq-operator"
-            - name: WATCH_NAMESPACE
-              value: "rabbitmq-operator-${branch}"
-"""
-            archiveArtifacts: 'operator.yaml'
-            // create separated namespace and deploy operator into it
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl create ns rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/service_account.yaml -n rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role_binding.yaml -n rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/role.yaml -n rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/clusterrole.yaml -n rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f deploy/deploy-operator-default/clusterrolebinding.yaml -n rabbitmq-operator-${branch} || true"
-            sh "HOME=/root;KUBECONFIG=/root/.kube/sandbox.config kubectl apply -f operator.yaml -n rabbitmq-operator-${branch} || true"
-        }
     }
 }
