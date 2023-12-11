@@ -61,7 +61,7 @@ type RabbitmqSpec struct {
 	// +kubebuilder:validation:Maximum=10
 	RabbitmqReplicas int32 `json:"replicas"`
 
-	// set PodDisruptionBudget. Default values: if replicas >= 2, minA = 1
+	// set PodDisruptionBudget. Default values: if replicas >= 2, MaxUnavailable = 1
 	// else if replicas = 1, maxU = 1
 	RabbitmqPdb v1beta1.PodDisruptionBudget `json:"pdb,omitempty"`
 
