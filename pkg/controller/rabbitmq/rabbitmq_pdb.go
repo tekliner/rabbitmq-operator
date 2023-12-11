@@ -69,7 +69,7 @@ func getDisruptionBudget(cr *rabbitmqv1.Rabbitmq) v1beta1policy.PodDisruptionBud
 		} else if cr.Spec.RabbitmqPdb.Spec.MaxUnavailable != nil {
 			specPDB.MaxUnavailable = cr.Spec.RabbitmqPdb.Spec.MaxUnavailable
 		} else {
-			specPDB.MinAvailable = func() *intstr.IntOrString { v := intstr.FromInt(1); return &v }()
+			specPDB.MaxUnavailable = func() *intstr.IntOrString { v := intstr.FromInt(1); return &v }()
 		}
 
 		podDisruptionBudget = v1beta1policy.PodDisruptionBudget{
