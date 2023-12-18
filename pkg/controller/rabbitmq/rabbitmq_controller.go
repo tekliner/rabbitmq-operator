@@ -462,7 +462,7 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			InitContainers: []corev1.Container{
 				{
 					Name:    "copy-rabbitmq-config",
-					Image:   "harbor.tools.improvado.io/hub-cache/library/busybox",
+					Image:   "busybox:stable",
 					Command: []string{"sh", "/rabbit-config/init.sh"},
 					VolumeMounts: []corev1.VolumeMount{
 						{
