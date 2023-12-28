@@ -167,7 +167,9 @@ func returnAnnotationsPrometheus(cr *rabbitmqv1.Rabbitmq) map[string]string {
 }
 
 func returnAnnotations(cr *rabbitmqv1.Rabbitmq) map[string]string {
-	annotations := map[string]string{}
+	annotations := map[string]string{
+		"karpenter.sh/do-not-evict": "true",
+	}
 	if cr.Spec.RabbitmqPrometheusExporterPort > 0 {
 		annotations = mergeMaps(annotations, returnAnnotationsPrometheus(cr))
 	}
@@ -527,9 +529,6 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Labels: mergeMaps(returnLabels(cr),
 				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
 			),
-			Annotations: map[string]string{
-				"karpenter.sh/do-not-evict": "true",
-			},
 		},
 		Spec: v1.StatefulSetSpec{
 			Replicas:    &cr.Spec.RabbitmqReplicas,
