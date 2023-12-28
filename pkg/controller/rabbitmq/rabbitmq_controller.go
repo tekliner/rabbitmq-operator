@@ -527,6 +527,9 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 			Labels: mergeMaps(returnLabels(cr),
 				map[string]string{"rabbitmq.improvado.io/component": "messaging"},
 			),
+			Annotations: map[string]string{
+				"karpenter.sh/do-not-evict": "true",
+			},
 		},
 		Spec: v1.StatefulSetSpec{
 			Replicas:    &cr.Spec.RabbitmqReplicas,
