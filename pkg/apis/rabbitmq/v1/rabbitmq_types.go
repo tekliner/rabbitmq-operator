@@ -76,6 +76,10 @@ type RabbitmqSpec struct {
 	// working now, but will be ignored in future versions
 	RabbitmqMemoryHighWatermark string `json:"memory_high_watermark,omitempty"`
 
+	RabbitmqMemoryHighWatermarkPagingRatio string `json:"vm_memory_high_watermark_paging_ratio,omitempty"`
+
+	RabbitmqMemoryHighWatermarkRelative string `json:"memory_high_watermark_relative,omitempty"`
+
 	// Hipe
 	RabbitmqHipeCompile bool `json:"hipe_compile,omitempty"`
 

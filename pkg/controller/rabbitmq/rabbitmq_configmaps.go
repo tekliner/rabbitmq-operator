@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	gtf "github.com/leekchan/gtf"
+	"github.com/leekchan/gtf"
 	rabbitmqv1 "github.com/tekliner/rabbitmq-operator/pkg/apis/rabbitmq/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +35,8 @@ cluster_formation.node_cleanup.only_log_warning = true
 cluster_partition_handling = {{ .Spec.RabbitmqClusterPartitionHandling | default "autoheal" }}
 loopback_users.guest = false
 hipe_compile = {{ .Spec.RabbitmqHipeCompile | default "false" }}
-vm_memory_high_watermark.absolute = {{ .Spec.RabbitmqMemoryHighWatermark }}
+vm_memory_high_watermark_paging_ratio = {{ .Spec.RabbitmqMemoryHighWatermarkPagingRatio | default "0.8" }}
+vm_memory_high_watermark.relative = {{ .Spec.RabbitmqMemoryHighWatermarkRelative | default "0.5" }}
 `
 
 const defaultRabbitmqPlugins = `[
