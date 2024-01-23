@@ -12,6 +12,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -388,6 +389,35 @@ func newStatefulSet(cr *rabbitmqv1.Rabbitmq, secretNames secretResouces) *v1.Sta
 	affinity := &corev1.Affinity{}
 	if cr.Spec.RabbitmqAffinity != nil {
 		affinity = cr.Spec.RabbitmqAffinity
+	}
+
+	defaultCPURequest := resource.MustParse("100m")
+	defaultMemoryRequest := resource.MustParse("512Mi")
+	defaultCPULimit := resource.MustParse("300m")
+	defaultMemoryLimit := resource.MustParse("512Mi")
+
+	if cr.Spec.RabbitmqPodRequests == nil {
+		cr.Spec.RabbitmqPodRequests = corev1.ResourceList{}
+	}
+
+	if _, ok := cr.Spec.RabbitmqPodRequests[corev1.ResourceCPU]; !ok {
+		cr.Spec.RabbitmqPodRequests[corev1.ResourceCPU] = defaultCPURequest
+	}
+
+	if _, ok := cr.Spec.RabbitmqPodRequests[corev1.ResourceMemory]; !ok {
+		cr.Spec.RabbitmqPodRequests[corev1.ResourceMemory] = defaultMemoryRequest
+	}
+
+	if cr.Spec.RabbitmqPodLimits == nil {
+		cr.Spec.RabbitmqPodLimits = corev1.ResourceList{}
+	}
+
+	if _, ok := cr.Spec.RabbitmqPodLimits[corev1.ResourceCPU]; !ok {
+		cr.Spec.RabbitmqPodLimits[corev1.ResourceCPU] = defaultCPULimit
+	}
+
+	if _, ok := cr.Spec.RabbitmqPodLimits[corev1.ResourceMemory]; !ok {
+		cr.Spec.RabbitmqPodLimits[corev1.ResourceMemory] = defaultMemoryLimit
 	}
 
 	// container with rabbitmq

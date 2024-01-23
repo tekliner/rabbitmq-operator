@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	"github.com/leekchan/gtf"
@@ -20,6 +21,7 @@ type templateDataStruct struct {
 	Spec            rabbitmqv1.RabbitmqSpec
 	DefaultUser     string
 	DefaultPassword string
+	Watermark       string
 }
 
 const defaultRabbitmqConfig = `# RabbitMQ operator templated config
@@ -36,7 +38,7 @@ cluster_partition_handling = {{ .Spec.RabbitmqClusterPartitionHandling | default
 loopback_users.guest = false
 hipe_compile = {{ .Spec.RabbitmqHipeCompile | default "false" }}
 vm_memory_high_watermark_paging_ratio = {{ .Spec.RabbitmqMemoryHighWatermarkPagingRatio | default "0.8" }}
-vm_memory_high_watermark.relative = {{ .Spec.RabbitmqMemoryHighWatermarkRelative | default "0.5" }}
+vm_memory_high_watermark.absolute = {{ .Watermark }}
 `
 
 const defaultRabbitmqPlugins = `[
@@ -76,6 +78,16 @@ func (r *ReconcileRabbitmq) reconcileConfigMap(reqLogger logr.Logger, cr *rabbit
 	reqLogger.Info("Started reconciling Configmap", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name)
 	var err error
 	var templateData templateDataStruct
+
+	memoryLimit, _ := cr.Spec.RabbitmqPodLimits[corev1.ResourceMemory]
+	memoryLimitBytes := memoryLimit.Value()
+	watermarkLimitBytes := memoryLimitBytes / 2
+
+	if cr.Spec.RabbitmqMemoryHighWatermark != "" {
+		templateData.Watermark = cr.Spec.RabbitmqMemoryHighWatermark
+	} else {
+		templateData.Watermark = strconv.FormatInt(watermarkLimitBytes, 10)
+	}
 
 	secretObj := corev1.Secret{}
 	reqLogger.Info("Configmap receiving secret", "ConfigMap.Namespace", cr.Namespace, "ConfigMap.Name", cr.Name, "Secret name", secretNames.ServiceAccount)
