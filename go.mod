@@ -8,7 +8,7 @@ require (
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30 // indirect
 	github.com/certifi/gocertifi v0.0.0-20180118203423-deb3ae2ef261 // indirect
 	github.com/coreos/prometheus-operator v0.26.0
-	github.com/emicklei/go-restful v2.9.0+incompatible // indirect
+	github.com/emicklei/go-restful v2.16.0+incompatible // indirect
 	github.com/getsentry/raven-go v0.2.0
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.0 // indirect
