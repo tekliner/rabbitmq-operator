@@ -169,7 +169,8 @@ func returnAnnotationsPrometheus(cr *rabbitmqv1.Rabbitmq) map[string]string {
 
 func returnAnnotations(cr *rabbitmqv1.Rabbitmq) map[string]string {
 	annotations := map[string]string{
-		"karpenter.sh/do-not-evict": "true",
+		"karpenter.sh/do-not-disrupt": "true",
+		"app.improvado.io/allow-disrupt-after": "2h",
 	}
 	if cr.Spec.RabbitmqPrometheusExporterPort > 0 {
 		annotations = mergeMaps(annotations, returnAnnotationsPrometheus(cr))
